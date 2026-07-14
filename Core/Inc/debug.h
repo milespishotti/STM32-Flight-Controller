@@ -9,6 +9,7 @@
 #define INC_DEBUG_H_
 
 #include "main.h"
+#include <stdio.h>
 
 int __io_putchar(int ch);
 
