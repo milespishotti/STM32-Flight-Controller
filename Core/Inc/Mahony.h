@@ -14,6 +14,7 @@ void Mahony_GetEuler(float *roll, float *pitch, float *yaw);
 
 void Mahony_UpdateIMU(float gx, float gy, float gz, float ax, float ay, float az, float dt);
 
+void Mahony_SetGains(float kp, float ki);
 
 
 #endif /* INC_MAHONY_H_ */

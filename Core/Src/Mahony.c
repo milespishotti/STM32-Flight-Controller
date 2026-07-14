@@ -162,6 +162,18 @@ void Mahony_GetEuler(float *roll, float *pitch, float *yaw)
 }
 
 
+void Mahony_SetGains(float kp, float ki)
+{
+    twoKp = 2.0f * kp;
+    twoKi = 2.0f * ki;
+
+    if (ki <= 0.0f)
+    {
+        integralX = 0.0f;
+        integralY = 0.0f;
+        integralZ = 0.0f;
+    }
+}
 
 
 

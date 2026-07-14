@@ -62,6 +62,8 @@ float yaw = 0.0f;
 float rollOffset = 0.0f;
 float pitchOffset = 0.0f;
 
+volatile uint8_t imuUpdateFlag = 0;
+
 
 /* USER CODE END PV */
 
@@ -85,11 +87,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
     if (htim->Instance == TIM2)
     {
-        MPU6050_Read();
-
-        Mahony_UpdateIMU(Gx - GxOffset, Gy - GyOffset, Gz - GzOffset, Ax, Ay, Az, 0.01f);
-
-        Mahony_GetEuler(&roll, &pitch, &yaw);
+        imuUpdateFlag = 1;
 //        timer_count++;
     }
 }
@@ -148,6 +146,7 @@ int main(void)
   Calibrate_MPU6050();
 
   Mahony_Init();
+  Mahony_SetGains(3.15f, 0.0f);
 
   HAL_TIM_Base_Start_IT(&htim2);
   HAL_Delay(3000);
@@ -166,6 +165,8 @@ int main(void)
                   GyOffset,
                   GzOffset);
 
+  uint32_t lastPrintTime = 0;
+
 
   /* USER CODE END 2 */
 
@@ -176,17 +177,31 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-      float levelRoll = roll - rollOffset;
-      float levelPitch = pitch - pitchOffset;
 
-      printf("A: %.2f %.2f %.2f | G: %.2f %.2f %.2f | RPY: %.2f %.2f %.2f\r\n",
-             Ax, Ay, Az,
-             Gx - GxOffset,
-             Gy - GyOffset,
-             Gz - GzOffset,
-             roll, pitch, yaw);
+      if (imuUpdateFlag)
+      {
+          imuUpdateFlag = 0;
 
-      HAL_Delay(200);
+          MPU6050_Read();
+
+          Mahony_UpdateIMU(Gx - GxOffset, Gy - GyOffset, Gz - GzOffset, Ax, Ay, Az, 0.01f);
+
+          Mahony_GetEuler(&roll, &pitch, &yaw);
+      }
+
+      if (HAL_GetTick() - lastPrintTime >= 50)
+        {
+
+            lastPrintTime = HAL_GetTick();
+
+            printf("A: %.2f %.2f %.2f | G: %.2f %.2f %.2f | RPY: %.2f %.2f %.2f\r\n",
+                 Ax, Ay, Az,
+                 Gx - GxOffset,
+                 Gy - GyOffset,
+                 Gz - GzOffset,
+                 roll, pitch, yaw);
+        }
+
 
   }
 
