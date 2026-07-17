@@ -175,6 +175,8 @@ int main(void)
                   GzOffset);
 
   uint32_t lastPrintTime = 0;
+  uint32_t lastDebugPrint = 0;
+
 
 
 
@@ -188,22 +190,20 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 
-      uint32_t lastDebugPrint = 0;
 
-      while (1)
-      {
-          if (HAL_GetTick() - lastDebugPrint >= 1000)
-          {
-              lastDebugPrint = HAL_GetTick();
 
-              printf("starts=%lu done=%lu busy=%u skips=%lu errors=%lu status=%d\r\n",
-                     dshot_start_count,
-                     dshot_done_count,
-                     dshot_busy,
-                     dshot_busy_skip_count,
-                     dshot_start_error_count,
-                     dshot_last_status);
-          }
+//          if (HAL_GetTick() - lastDebugPrint >= 1000)
+//          {
+//              lastDebugPrint = HAL_GetTick();
+//
+//              printf("starts=%lu done=%lu busy=%u skips=%lu errors=%lu status=%d\r\n",
+//                     dshot_start_count,
+//                     dshot_done_count,
+//                     dshot_busy,
+//                     dshot_busy_skip_count,
+//                     dshot_start_error_count,
+//                     dshot_last_status);
+//          }
 
           if (imuUpdateFlag)
           {
@@ -221,25 +221,25 @@ int main(void)
 
               Mahony_GetEuler(&roll, &pitch, &yaw);
 
-              DShot_Send(100, 100, 100, 100);
+              DShot_Send(0, 48, 500, 2047);
           }
-      }
+
 
       if (HAL_GetTick() - lastPrintTime >= 50)
         {
 
             lastPrintTime = HAL_GetTick();
 
-//            printf("A: %.2f %.2f %.2f | G: %.2f %.2f %.2f | RPY: %.2f %.2f %.2f\r\n",
-//                 Ax, Ay, Az,
-//                 Gx - GxOffset,
-//                 Gy - GyOffset,
-//                 Gz - GzOffset,
-//                 roll, pitch, yaw);
+            printf("A: %.2f %.2f %.2f | G: %.2f %.2f %.2f | RPY: %.2f %.2f %.2f\r\n",
+                 Ax, Ay, Az,
+                 Gx - GxOffset,
+                 Gy - GyOffset,
+                 Gz - GzOffset,
+                 roll, pitch, yaw);
         }
 
-
   }
+
 
   /* USER CODE END 3 */
 }
