@@ -130,10 +130,58 @@ static uint8_t CRSF_CalculateCRC(const uint8_t *data, const uint8_t length)
 
 }
 
+void CRSF_FrameGenerator(const uint16_t channels[CRSF_CHANNEL_COUNT], uint8_t frame[CRSF_RC_FRAME_SIZE])
+{
+
+    for (int i = 0; i < CRSF_RC_FRAME_SIZE; i++)
+    {
+        frame[i] = 0;
+    }
 
 
+    frame[0] = CRSF_ADDRESS_FLIGHT_CONTROLLER;
+    frame[1] = CRSF_RC_FRAME_LENGTH_FIELD;
+    frame[2] = CRSF_FRAME_TYPE_RC_CHANNELS;
+
+    frame[3] = channels[0]; // first eight bits of channel 0
+    frame[4] = ((channels[1] & 0x1F) << 3) | ((channels[0] >> 8) & 0x07); // first five bits of channel 1 + last three bits of channel 0
+    frame[5] = ((channels[2] & 0x03) << 6) | ((channels[1] >> 5) & 0x3F);  // first two bits of channel 2 + last six bits of channel 1
+    frame[6] = ((channels[2] >> 2) & 0xFF);   // third through the 10th bits of channel 2
+    frame[7] = ((channels[3] & 0x7F) << 1) | ((channels[2] >> 10) & 0x01); // first seven bits of channel 3 and last bit of channel 2
+    frame[8] = ((channels[4] & 0x0F) << 4) | ((channels[3] >> 7) & 0x0F); // first four bits of channel 4 and last four bits of channel 3
+    frame[9] = ((channels[5] & 0x01) << 7) | ((channels[4] >> 4) & 0x7F); // first bit of channel 5 and last seven bits of channel 4
+    frame[10] = ((channels[5] >> 1) & 0xFF); // second through the 9th bits of channel 5
+    frame[11] = ((channels[6] & 0x3F) << 2) | ((channels[5] >> 9) & 0x03); // first six bits of channel 6 and last two bits of channel 5
+    frame[12] = ((channels[7] & 0x07) << 5) | ((channels[6] >> 6) & 0x1F); // first three bits of channel 7 and last five bits of channel 6
+    frame[13] = ((channels[7] >> 3) & 0xFF);  // last eight bits of channel 7
+
+    frame[14] = channels[8];
+    frame[15] = ((channels[9] & 0x1F) << 3) | ((channels[8] >> 8) & 0x07);
+    frame[16] = ((channels[10] & 0x03) << 6) | ((channels[9] >> 5) & 0x3F);
+    frame[17] = ((channels[10] >> 2) & 0xFF);
+    frame[18] = ((channels[11] & 0x7F) << 1) | ((channels[10] >> 10) & 0x01);
+    frame[19] = ((channels[12] & 0x0F) << 4) | ((channels[11] >> 7) & 0x0F);
+    frame[20] = ((channels[13] & 0x01) << 7) | ((channels[12] >> 4) & 0x7F);
+    frame[21] = ((channels[13] >> 1) & 0xFF);
+    frame[22] = ((channels[14] & 0x3F) << 2) | ((channels[13] >> 9) & 0x03);
+    frame[23] = ((channels[15] & 0x07) << 5) | ((channels[14] >> 6) & 0x1F);
+    frame[24] = ((channels[15] >> 3) & 0xFF);
+
+    frame[25] = CRSF_CalculateCRC(&frame[2], 23);
+
+}
 
 
+void CRSF_TestFrame(const uint8_t frame[26]) {
+
+    for (int i = 0; i < CRSF_RC_FRAME_SIZE; i ++)
+    {
+        rx_buffer[i] = frame[i];
+    }
+
+    CRSF_ParseFrame();
+
+}
 
 
 

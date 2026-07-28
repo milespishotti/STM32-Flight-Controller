@@ -237,12 +237,12 @@ int main(void)
 
             lastPrintTime = HAL_GetTick();
 
-            printf("A: %.2f %.2f %.2f | G: %.2f %.2f %.2f | RPY: %.2f %.2f %.2f\r\n",
-                 Ax, Ay, Az,
-                 Gx - GxOffset,
-                 Gy - GyOffset,
-                 Gz - GzOffset,
-                 roll, pitch, yaw);
+//            printf("A: %.2f %.2f %.2f | G: %.2f %.2f %.2f | RPY: %.2f %.2f %.2f\r\n",
+//                 Ax, Ay, Az,
+//                 Gx - GxOffset,
+//                 Gy - GyOffset,
+//                 Gz - GzOffset,
+//                 roll, pitch, yaw);
         }
 
   }
