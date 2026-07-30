@@ -12,7 +12,20 @@
 
 static RC_Setpoints setpoints;
 
+static uint16_t RCInput_ClampChannels(uint16_t channel)
+{
 
+    if (channel < 172)
+    {
+        channel = 172;
+    }
+    else if (channel > 1811)
+    {
+        channel = 1811;
+    }
+
+    return channel;
+}
 
 void RCInput_Update(const uint16_t channels[CRSF_CHANNEL_COUNT])
 {
@@ -21,15 +34,12 @@ void RCInput_Update(const uint16_t channels[CRSF_CHANNEL_COUNT])
     uint16_t raw_throttle = channels[2];
     uint16_t raw_yaw_rate = channels[3];
 
-    /* Clamp throttle to valid CRSF range */
-    if (raw_throttle < 172)
-    {
-        raw_throttle = 172;
-    }
-    else if (raw_throttle > 1811)
-    {
-        raw_throttle = 1811;
-    }
+
+    raw_roll = RCInput_ClampChannels(raw_roll);
+    raw_pitch = RCInput_ClampChannels(raw_pitch);
+    raw_yaw_rate = RCInput_ClampChannels(raw_yaw_rate);
+    raw_throttle = RCInput_ClampChannels(raw_throttle);
+
 
     /* Normalize stick inputs */
     float normalized_roll = (raw_roll - 992.0f) / 819.0f;
@@ -67,6 +77,13 @@ void RCInput_Update(const uint16_t channels[CRSF_CHANNEL_COUNT])
     setpoints.pitch_setpoint = pitch_setpoint;
     setpoints.yaw_rate_setpoint = yaw_rate_setpoint;
     setpoints.throttle = (uint16_t)throttle_setpoint;
+}
+
+
+
+const RC_Setpoints *RCInput_GetSetpoints(void)
+{
+    return &setpoints;
 }
 
 

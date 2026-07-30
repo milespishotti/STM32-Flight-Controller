@@ -27,6 +27,7 @@
 #include "DShot.h"
 #include "MotorMixer.h"
 #include "CRSF.h"
+#include "RCInput.h"
 
 
 #include <stdio.h>
@@ -90,6 +91,89 @@ static void MX_USART6_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+static void RCInput_RunTests(void)
+{
+    uint16_t test_channels[CRSF_CHANNEL_COUNT];
+    const RC_Setpoints *rc;
+
+    /* ---------------- Center sticks, minimum throttle ---------------- */
+    for (uint8_t i = 0; i < CRSF_CHANNEL_COUNT; i++)
+    {
+        test_channels[i] = 992;
+    }
+
+    test_channels[2] = 172;
+
+    RCInput_Update(test_channels);
+    rc = RCInput_GetSetpoints();
+
+    printf("\r\nTEST 1: Center sticks, minimum throttle\r\n");
+    printf("Roll: %.2f deg\r\n", rc->roll_setpoint);
+    printf("Pitch: %.2f deg\r\n", rc->pitch_setpoint);
+    printf("Yaw: %.2f deg/s\r\n", rc->yaw_rate_setpoint);
+    printf("Throttle: %u\r\n", rc->throttle);
+
+    /* ---------------- Minimum stick values ---------------- */
+    test_channels[0] = 172;
+    test_channels[1] = 172;
+    test_channels[2] = 172;
+    test_channels[3] = 172;
+
+    RCInput_Update(test_channels);
+    rc = RCInput_GetSetpoints();
+
+    printf("\r\nTEST 2: Minimum values\r\n");
+    printf("Roll: %.2f deg\r\n", rc->roll_setpoint);
+    printf("Pitch: %.2f deg\r\n", rc->pitch_setpoint);
+    printf("Yaw: %.2f deg/s\r\n", rc->yaw_rate_setpoint);
+    printf("Throttle: %u\r\n", rc->throttle);
+
+    /* ---------------- Maximum stick values ---------------- */
+    test_channels[0] = 1811;
+    test_channels[1] = 1811;
+    test_channels[2] = 1811;
+    test_channels[3] = 1811;
+
+    RCInput_Update(test_channels);
+    rc = RCInput_GetSetpoints();
+
+    printf("\r\nTEST 3: Maximum values\r\n");
+    printf("Roll: %.2f deg\r\n", rc->roll_setpoint);
+    printf("Pitch: %.2f deg\r\n", rc->pitch_setpoint);
+    printf("Yaw: %.2f deg/s\r\n", rc->yaw_rate_setpoint);
+    printf("Throttle: %u\r\n", rc->throttle);
+
+    /* ---------------- Deadband test ---------------- */
+    test_channels[0] = 1000;
+    test_channels[1] = 980;
+    test_channels[2] = 992;
+    test_channels[3] = 1000;
+
+    RCInput_Update(test_channels);
+    rc = RCInput_GetSetpoints();
+
+    printf("\r\nTEST 4: Inputs inside deadband\r\n");
+    printf("Roll: %.2f deg\r\n", rc->roll_setpoint);
+    printf("Pitch: %.2f deg\r\n", rc->pitch_setpoint);
+    printf("Yaw: %.2f deg/s\r\n", rc->yaw_rate_setpoint);
+    printf("Throttle: %u\r\n", rc->throttle);
+
+    /* ---------------- Out-of-range clamp test ---------------- */
+    test_channels[0] = 0;
+    test_channels[1] = 2047;
+    test_channels[2] = 0;
+    test_channels[3] = 2047;
+
+    RCInput_Update(test_channels);
+    rc = RCInput_GetSetpoints();
+
+    printf("\r\nTEST 5: Out-of-range clamp test\r\n");
+    printf("Roll: %.2f deg\r\n", rc->roll_setpoint);
+    printf("Pitch: %.2f deg\r\n", rc->pitch_setpoint);
+    printf("Yaw: %.2f deg/s\r\n", rc->yaw_rate_setpoint);
+    printf("Throttle: %u\r\n", rc->throttle);
+}
 
 volatile uint32_t timer_count = 0;
 
@@ -184,7 +268,7 @@ int main(void)
   uint32_t lastDebugPrint = 0;
 
 
-
+  RCInput_RunTests();
 
 
   /* USER CODE END 2 */

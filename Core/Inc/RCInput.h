@@ -26,4 +26,6 @@ void RCInput_Update(const uint16_t channels[CRSF_CHANNEL_COUNT]);
 
 const RC_Setpoints *RCInput_GetSetpoints(void);
 
+
+
 #endif /* INC_RCINPUT_H_ */
