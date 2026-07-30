@@ -93,102 +93,6 @@ static void MX_USART6_UART_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-void FullPipeline_Test(void)
-{
-    uint16_t input_channels[16] = {
-        1401,   // Roll: +0.5 normalized → +15 degrees
-        582,    // Pitch: -0.5 normalized → -15 degrees
-        992,    // Throttle: approximately midrange
-        1156,   // Yaw: +0.2 normalized → +30 deg/s
-        992, 992, 992, 992,
-        992, 992, 992, 992,
-        992, 992, 992, 992
-    };
-
-    uint8_t frame[26];
-
-    /*
-     * Stage 1:
-     * Generate and parse a CRSF frame.
-     */
-    CRSF_FrameGenerator(input_channels, frame);
-    CRSF_TestFrame(frame);
-
-    const uint16_t *parsed_channels = CRSF_GetChannels();
-
-    printf("\r\n--- Full Pipeline Test ---\r\n");
-
-    printf("Parsed CRSF:\r\n");
-    printf("Roll: %u Pitch: %u Throttle: %u Yaw: %u\r\n",
-           parsed_channels[0],
-           parsed_channels[1],
-           parsed_channels[2],
-           parsed_channels[3]);
-
-    /*
-     * Stage 2:
-     * Convert raw CRSF channels into flight setpoints.
-     */
-    RCInput_Update(parsed_channels);
-
-    const RC_Setpoints *setpoints = RCInput_GetSetpoints();
-
-    printf("RC Setpoints:\r\n");
-    printf("Roll: %.2f Pitch: %.2f Yaw rate: %.2f Throttle: %u \r\n",
-           setpoints->roll_setpoint,
-           setpoints->pitch_setpoint,
-           setpoints->yaw_rate_setpoint,
-           setpoints->throttle);
-
-    /*
-     * Stage 3:
-     * Supply simulated attitude measurements.
-     *
-     * The simulated drone is perfectly level and has no yaw rotation.
-     */
-    FlightController_Input controller_input = {
-        .roll_setpoint = setpoints->roll_setpoint,
-        .pitch_setpoint = setpoints->pitch_setpoint,
-        .yaw_rate_setpoint = setpoints->yaw_rate_setpoint,
-
-        .roll_measured = 0.0f,
-        .pitch_measured = 0.0f,
-        .yaw_rate_measured = 0.0f,
-
-        .dt = 0.01f
-    };
-
-    FlightController_Init();
-    FlightController_Update(&controller_input);
-
-    const FlightController_Output *controller_output =
-            FlightController_GetOutput();
-
-    printf("Controller Output:\r\n");
-    printf("Roll: %.2f Pitch: %.2f Yaw: %.2f\r\n",
-           controller_output->roll_correction,
-           controller_output->pitch_correction,
-           controller_output->yaw_rate_correction);
-
-    /*
-     * Stage 4:
-     * Pass controller corrections and RC throttle into the mixer.
-     */
-    MotorOutputs motor_output = MotorMixer_Mix(
-            (int16_t)controller_output->roll_correction,
-            (int16_t)controller_output->pitch_correction,
-            (int16_t)controller_output->yaw_rate_correction,
-            setpoints->throttle);
-
-    printf("Motor Mixer Output:\r\n");
-    printf("M1: %u M2: %u M3: %u M4: %u\r\n",
-           motor_output.m1,
-           motor_output.m2,
-           motor_output.m3,
-           motor_output.m4);
-
-    printf("--- End Test ---\r\n");
-}
 
 
 volatile uint32_t timer_count = 0;
@@ -248,26 +152,51 @@ int main(void)
 
   printf("Flight controller booted!\r\n");
 
+  DShot_Init();
+
   while (!MPU6050_Init())
   {
-      printf("MPU6050 Initialization failed\r\n");
+      printf("MPU6050 initialization failed\r\n");
       HAL_Delay(500);
-
   }
-  printf("MPU6050 Initialized\r\n");
+
+  printf("MPU6050 initialized\r\n");
 
   printf("Keep MPU6050 still. Calibrating...\r\n");
   Calibrate_MPU6050();
 
+  printf("Gyro offsets: %.3f, %.3f, %.3f\r\n",
+         GxOffset,
+         GyOffset,
+         GzOffset);
+
   Mahony_Init();
   Mahony_SetGains(3.15f, 0.0f);
 
-  HAL_TIM_Base_Start_IT(&htim2);
-  DShot_Init();
-  HAL_Delay(3000);
+  FlightController_Init();
 
-//  CRSF_Init();
-//  printf("CRSF Parsing Initialized\r\n");
+  CRSF_Init();
+
+  /*
+   * Establish an initial attitude before starting the control timer.
+   */
+  for (uint16_t i = 0; i < 200; i++)
+  {
+      MPU6050_Read();
+
+      Mahony_UpdateIMU(
+              GxFiltered,
+              GyFiltered,
+              GzFiltered,
+              Ax,
+              Ay,
+              Az,
+              0.01f);
+
+      HAL_Delay(10);
+  }
+
+  Mahony_GetEuler(&roll, &pitch, &yaw);
 
   rollOffset = roll;
   pitchOffset = pitch;
@@ -276,20 +205,12 @@ int main(void)
          rollOffset,
          pitchOffset);
 
-
   printf("Calibration complete\r\n");
-  printf("Offsets: %.3f, %.3f, %.3f\r\n",
-                  GxOffset,
-                  GyOffset,
-                  GzOffset);
 
-  uint32_t lastPrintTime = 0;
-  uint32_t lastDebugPrint = 0;
-
-
-
-  FullPipeline_Test();
-
+  if (HAL_TIM_Base_Start_IT(&htim2) != HAL_OK)
+  {
+      Error_Handler();
+  }
 
 
   /* USER CODE END 2 */
@@ -304,62 +225,109 @@ int main(void)
 
 
 
-//          if (HAL_GetTick() - lastDebugPrint >= 1000)
-//          {
-//              lastDebugPrint = HAL_GetTick();
-//
-//              printf("starts=%lu done=%lu busy=%u skips=%lu errors=%lu status=%d\r\n",
-//                     dshot_start_count,
-//                     dshot_done_count,
-//                     dshot_busy,
-//                     dshot_busy_skip_count,
-//                     dshot_start_error_count,
-//                     dshot_last_status);
-//          }
+      MPU6050_Read();
 
-//          if (imuUpdateFlag)
-//          {
-//              imuUpdateFlag = 0;
-//
-//              MPU6050_Read();
-//
-//              Mahony_UpdateIMU(
-//                  Gx - GxOffset,
-//                  Gy - GyOffset,
-//                  Gz - GzOffset,
-//                  Ax, Ay, Az,
-//                  0.01f
-//              );
-//
-//              Mahony_GetEuler(&roll, &pitch, &yaw);
-//
-//              DShot_Send(0, 48, 500, 2047);
-//          }
-//
-//
-//      if (HAL_GetTick() - lastPrintTime >= 50)
-//        {
-//
-//            lastPrintTime = HAL_GetTick();
-//
-//
-//        }
+      float correctedGx = Gx - GxOffset;
+      float correctedGy = Gy - GyOffset;
+      float correctedGz = Gz - GzOffset;
 
-//      const uint16_t *channels = CRSF_GetChannels();
-//
-//      RCInput_Update(channels);
-//
-//      const RC_Setpoints *setpoints = RCInput_GetSetpoints();
-//
-//      printf("Roll: %.2f  Pitch: %.2f  Throttle: %u  Yaw: %.2f\r\n",
-//             setpoints->roll_setpoint,
-//             setpoints->pitch_setpoint,
-//             (unsigned int)setpoints->throttle,
-//             setpoints->yaw_rate_setpoint);
-//
-//      HAL_Delay(100);
+      Mahony_UpdateIMU(
+              correctedGx,
+              correctedGy,
+              correctedGz,
+              Ax,
+              Ay,
+              Az,
+              0.01f);
 
+      float roll;
+      float pitch;
+      float yaw;
 
+      Mahony_GetEuler(&roll, &pitch, &yaw);
+
+      const uint16_t *channels = CRSF_GetChannels();
+
+      RCInput_Update(channels);
+
+      const RC_Setpoints *setpoints =
+              RCInput_GetSetpoints();
+
+      FlightController_Input controller_input = {
+          .roll_setpoint = setpoints->roll_setpoint,
+          .pitch_setpoint = setpoints->pitch_setpoint,
+          .yaw_rate_setpoint = setpoints->yaw_rate_setpoint,
+
+          .roll_measured = roll,
+          .pitch_measured = pitch,
+          .yaw_rate_measured = correctedGz,
+
+          .dt = 0.01f
+      };
+
+      FlightController_Update(&controller_input);
+
+      const FlightController_Output *controller_output =
+              FlightController_GetOutput();
+
+      MotorOutputs motor_output = MotorMixer_Mix(
+              (int16_t)controller_output->roll_correction,
+              (int16_t)controller_output->pitch_correction,
+              (int16_t)controller_output->yaw_rate_correction,
+              setpoints->throttle);
+
+//      DShot_Send(
+//              motor_output.m1,
+//              motor_output.m2,
+//              motor_output.m3,
+//              motor_output.m4);
+
+//      static uint32_t print_counter = 0;
+//
+//      print_counter++;
+//
+//      if (print_counter >= 20)
+//      {
+//          print_counter = 0;
+
+//          printf(
+//              "SP R:%.2f P:%.2f Y:%.2f T:%u | "
+//              "MEAS R:%.2f P:%.2f Y:%.2f | "
+//              "CORR R:%.2f P:%.2f Y:%.2f | "
+//              "M:%u %u %u %u\r\n",
+//              setpoints->roll_setpoint,
+//              setpoints->pitch_setpoint,
+//              setpoints->yaw_rate_setpoint,
+//              setpoints->throttle,
+//
+//              roll,
+//              pitch,
+//              GzFiltered,
+//
+//              controller_output->roll_correction,
+//              controller_output->pitch_correction,
+//              controller_output->yaw_rate_correction,
+//
+//              motor_output.m1,
+//              motor_output.m2,
+//              motor_output.m3,
+//              motor_output.m4);
+
+//      }
+      static uint8_t debugCounter = 0;
+
+      if (++debugCounter >= 10)
+      {
+          debugCounter = 0;
+
+          const FlightController_Output *controller_output =
+              FlightController_GetOutput();
+
+          printf("FC SP: %.2f Meas: %.2f Corr: %.2f\r\n",
+                 controller_input.pitch_setpoint,
+                 controller_input.pitch_measured,
+                 controller_output->pitch_correction);
+      }
   }
 
 
