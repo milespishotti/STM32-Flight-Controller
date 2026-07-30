@@ -93,88 +93,103 @@ static void MX_USART6_UART_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-static void RCInput_RunTests(void)
+void FullPipeline_Test(void)
 {
-    uint16_t test_channels[CRSF_CHANNEL_COUNT];
-    const RC_Setpoints *rc;
+    uint16_t input_channels[16] = {
+        1401,   // Roll: +0.5 normalized → +15 degrees
+        582,    // Pitch: -0.5 normalized → -15 degrees
+        992,    // Throttle: approximately midrange
+        1156,   // Yaw: +0.2 normalized → +30 deg/s
+        992, 992, 992, 992,
+        992, 992, 992, 992,
+        992, 992, 992, 992
+    };
 
-    /* ---------------- Center sticks, minimum throttle ---------------- */
-    for (uint8_t i = 0; i < CRSF_CHANNEL_COUNT; i++)
-    {
-        test_channels[i] = 992;
-    }
+    uint8_t frame[26];
 
-    test_channels[2] = 172;
+    /*
+     * Stage 1:
+     * Generate and parse a CRSF frame.
+     */
+    CRSF_FrameGenerator(input_channels, frame);
+    CRSF_TestFrame(frame);
 
-    RCInput_Update(test_channels);
-    rc = RCInput_GetSetpoints();
+    const uint16_t *parsed_channels = CRSF_GetChannels();
 
-    printf("\r\nTEST 1: Center sticks, minimum throttle\r\n");
-    printf("Roll: %.2f deg\r\n", rc->roll_setpoint);
-    printf("Pitch: %.2f deg\r\n", rc->pitch_setpoint);
-    printf("Yaw: %.2f deg/s\r\n", rc->yaw_rate_setpoint);
-    printf("Throttle: %u\r\n", rc->throttle);
+    printf("\r\n--- Full Pipeline Test ---\r\n");
 
-    /* ---------------- Minimum stick values ---------------- */
-    test_channels[0] = 172;
-    test_channels[1] = 172;
-    test_channels[2] = 172;
-    test_channels[3] = 172;
+    printf("Parsed CRSF:\r\n");
+    printf("Roll: %u Pitch: %u Throttle: %u Yaw: %u\r\n",
+           parsed_channels[0],
+           parsed_channels[1],
+           parsed_channels[2],
+           parsed_channels[3]);
 
-    RCInput_Update(test_channels);
-    rc = RCInput_GetSetpoints();
+    /*
+     * Stage 2:
+     * Convert raw CRSF channels into flight setpoints.
+     */
+    RCInput_Update(parsed_channels);
 
-    printf("\r\nTEST 2: Minimum values\r\n");
-    printf("Roll: %.2f deg\r\n", rc->roll_setpoint);
-    printf("Pitch: %.2f deg\r\n", rc->pitch_setpoint);
-    printf("Yaw: %.2f deg/s\r\n", rc->yaw_rate_setpoint);
-    printf("Throttle: %u\r\n", rc->throttle);
+    const RC_Setpoints *setpoints = RCInput_GetSetpoints();
 
-    /* ---------------- Maximum stick values ---------------- */
-    test_channels[0] = 1811;
-    test_channels[1] = 1811;
-    test_channels[2] = 1811;
-    test_channels[3] = 1811;
+    printf("RC Setpoints:\r\n");
+    printf("Roll: %.2f Pitch: %.2f Yaw rate: %.2f Throttle: %u \r\n",
+           setpoints->roll_setpoint,
+           setpoints->pitch_setpoint,
+           setpoints->yaw_rate_setpoint,
+           setpoints->throttle);
 
-    RCInput_Update(test_channels);
-    rc = RCInput_GetSetpoints();
+    /*
+     * Stage 3:
+     * Supply simulated attitude measurements.
+     *
+     * The simulated drone is perfectly level and has no yaw rotation.
+     */
+    FlightController_Input controller_input = {
+        .roll_setpoint = setpoints->roll_setpoint,
+        .pitch_setpoint = setpoints->pitch_setpoint,
+        .yaw_rate_setpoint = setpoints->yaw_rate_setpoint,
 
-    printf("\r\nTEST 3: Maximum values\r\n");
-    printf("Roll: %.2f deg\r\n", rc->roll_setpoint);
-    printf("Pitch: %.2f deg\r\n", rc->pitch_setpoint);
-    printf("Yaw: %.2f deg/s\r\n", rc->yaw_rate_setpoint);
-    printf("Throttle: %u\r\n", rc->throttle);
+        .roll_measured = 0.0f,
+        .pitch_measured = 0.0f,
+        .yaw_rate_measured = 0.0f,
 
-    /* ---------------- Deadband test ---------------- */
-    test_channels[0] = 1000;
-    test_channels[1] = 980;
-    test_channels[2] = 992;
-    test_channels[3] = 1000;
+        .dt = 0.01f
+    };
 
-    RCInput_Update(test_channels);
-    rc = RCInput_GetSetpoints();
+    FlightController_Init();
+    FlightController_Update(&controller_input);
 
-    printf("\r\nTEST 4: Inputs inside deadband\r\n");
-    printf("Roll: %.2f deg\r\n", rc->roll_setpoint);
-    printf("Pitch: %.2f deg\r\n", rc->pitch_setpoint);
-    printf("Yaw: %.2f deg/s\r\n", rc->yaw_rate_setpoint);
-    printf("Throttle: %u\r\n", rc->throttle);
+    const FlightController_Output *controller_output =
+            FlightController_GetOutput();
 
-    /* ---------------- Out-of-range clamp test ---------------- */
-    test_channels[0] = 0;
-    test_channels[1] = 2047;
-    test_channels[2] = 0;
-    test_channels[3] = 2047;
+    printf("Controller Output:\r\n");
+    printf("Roll: %.2f Pitch: %.2f Yaw: %.2f\r\n",
+           controller_output->roll_correction,
+           controller_output->pitch_correction,
+           controller_output->yaw_rate_correction);
 
-    RCInput_Update(test_channels);
-    rc = RCInput_GetSetpoints();
+    /*
+     * Stage 4:
+     * Pass controller corrections and RC throttle into the mixer.
+     */
+    MotorOutputs motor_output = MotorMixer_Mix(
+            (int16_t)controller_output->roll_correction,
+            (int16_t)controller_output->pitch_correction,
+            (int16_t)controller_output->yaw_rate_correction,
+            setpoints->throttle);
 
-    printf("\r\nTEST 5: Out-of-range clamp test\r\n");
-    printf("Roll: %.2f deg\r\n", rc->roll_setpoint);
-    printf("Pitch: %.2f deg\r\n", rc->pitch_setpoint);
-    printf("Yaw: %.2f deg/s\r\n", rc->yaw_rate_setpoint);
-    printf("Throttle: %u\r\n", rc->throttle);
+    printf("Motor Mixer Output:\r\n");
+    printf("M1: %u M2: %u M3: %u M4: %u\r\n",
+           motor_output.m1,
+           motor_output.m2,
+           motor_output.m3,
+           motor_output.m4);
+
+    printf("--- End Test ---\r\n");
 }
+
 
 volatile uint32_t timer_count = 0;
 
@@ -251,8 +266,8 @@ int main(void)
   DShot_Init();
   HAL_Delay(3000);
 
-  CRSF_Init();
-  printf("CRSF Parsing Initialized\r\n");
+//  CRSF_Init();
+//  printf("CRSF Parsing Initialized\r\n");
 
   rollOffset = roll;
   pitchOffset = pitch;
@@ -273,53 +288,7 @@ int main(void)
 
 
 
-
-  FlightController_Input input = {
-      .roll_setpoint = 10.0f,
-      .roll_measured = 8.0f,
-
-      .pitch_setpoint = 0.0f,
-      .pitch_measured = 0.0f,
-
-      .yaw_rate_setpoint = 0.0f,
-      .yaw_rate_measured = 0.0f,
-
-      .dt = 0.01f
-  };
-
-  FlightController_Init();
-
-  const FlightController_Output *output =
-      FlightController_GetOutput();
-
-  FlightController_Update(&input);
-
-  printf("First:  Roll %.2f\r\n",
-         output->roll_correction);
-
-  FlightController_Update(&input);
-
-  printf("Second: Roll %.2f\r\n",
-         output->roll_correction);
-
-  input.roll_measured = 9.0f;
-
-  FlightController_Update(&input);
-
-  printf("Third:  Roll %.2f\r\n",
-         output->roll_correction);
-
-  FlightController_Reset();
-
-  FlightController_Update(&input);
-
-    printf("Third:  Roll %.2f\r\n",
-           output->roll_correction);
-
-
-
-
-
+  FullPipeline_Test();
 
 
 

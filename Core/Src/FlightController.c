@@ -7,6 +7,8 @@
 
 #include "FlightController.h"
 
+#include <stddef.h>
+
 static float FlightController_Compute(PID_Controller *state, float error, float dt);
 
 static PID_Controller roll_pid;
@@ -18,15 +20,15 @@ static FlightController_Output output;
 void FlightController_Init(void)
 {
     roll_pid = (PID_Controller) {
-            .kp = 0.0f,
+            .kp = 1.0f,
             .ki = 0.0f,
-            .kd = 1.0f,
+            .kd = 0.0f,
             .previous_error = 0.0f,
             .integral = 0.0f,
     };
 
     pitch_pid = (PID_Controller) {
-                .kp = 0.0f,
+                .kp = 1.0f,
                 .ki = 0.0f,
                 .kd = 0.0f,
                 .previous_error = 0.0f,
@@ -34,7 +36,7 @@ void FlightController_Init(void)
     };
 
     yaw_rate_pid = (PID_Controller) {
-                .kp = 0.0f,
+                .kp = 1.0f,
                 .ki = 0.0f,
                 .kd = 0.0f,
                 .previous_error = 0.0f,
@@ -74,6 +76,11 @@ static float FlightController_Compute(PID_Controller *state, float error, float 
 
 void FlightController_Update(const FlightController_Input *input)
 {
+
+    if (input == NULL)
+    {
+        return;
+    }
 
     float roll_error = input->roll_setpoint - input->roll_measured;
     float pitch_error = input->pitch_setpoint - input->pitch_measured;

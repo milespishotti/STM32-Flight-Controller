@@ -19,7 +19,6 @@ typedef struct
     float pitch_setpoint;
     float yaw_rate_setpoint;
     uint16_t throttle;
-    uint8_t armed;
 } RC_Setpoints;
 
 void RCInput_Update(const uint16_t channels[CRSF_CHANNEL_COUNT]);
