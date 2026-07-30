@@ -11,7 +11,9 @@
 #include <stdint.h>
 
 const uint16_t *CRSF_GetChannels(void);
-void CSRF_Init(void);
+void CRSF_Init(void);
+
+uint32_t CRSF_GetValidFrameCount(void);
 
 void CRSF_FrameGenerator(const uint16_t channels[16], uint8_t frame[26]);
 

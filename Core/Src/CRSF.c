@@ -29,6 +29,7 @@ static void CRSF_ParseFrame(void);
 static uint8_t CRSF_CalculateCRC(const uint8_t *data, uint8_t length);
 static void CRSF_UpdateChannels(const uint8_t *payload);
 
+static volatile uint32_t valid_frame_count = 0;
 
 
 void CRSF_Init(void)
@@ -41,7 +42,14 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
     if (huart == &huart6)
     {
+//        printf("%02X %02X %02X %02X\r\n",
+//                       rx_buffer[0],
+//                       rx_buffer[1],
+//                       rx_buffer[2],
+//                       rx_buffer[3]);
         CRSF_ParseFrame();
+        valid_frame_count++;
+//        printf("RX\r\n");
 
         HAL_UART_Receive_DMA(&huart6, rx_buffer, CRSF_RC_FRAME_SIZE);
     }
@@ -70,6 +78,10 @@ static void CRSF_ParseFrame(void)
     }
 
     uint8_t calculated_crc = CRSF_CalculateCRC(&rx_buffer[2], 23);
+
+//    printf("CRC calc: %02X  recv: %02X\r\n",
+//           calculated_crc,
+//           rx_buffer[25]);
 
     if (calculated_crc != rx_buffer[25])
     {
@@ -181,6 +193,11 @@ void CRSF_TestFrame(const uint8_t frame[26]) {
 
     CRSF_ParseFrame();
 
+}
+
+uint32_t CRSF_GetValidFrameCount(void)
+{
+    return valid_frame_count;
 }
 
 

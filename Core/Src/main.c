@@ -28,6 +28,7 @@
 #include "MotorMixer.h"
 #include "CRSF.h"
 #include "RCInput.h"
+#include "FlightController.h"
 
 
 #include <stdio.h>
@@ -250,6 +251,9 @@ int main(void)
   DShot_Init();
   HAL_Delay(3000);
 
+  CRSF_Init();
+  printf("CRSF Parsing Initialized\r\n");
+
   rollOffset = roll;
   pitchOffset = pitch;
 
@@ -268,7 +272,55 @@ int main(void)
   uint32_t lastDebugPrint = 0;
 
 
-  RCInput_RunTests();
+
+
+  FlightController_Input input = {
+      .roll_setpoint = 10.0f,
+      .roll_measured = 8.0f,
+
+      .pitch_setpoint = 0.0f,
+      .pitch_measured = 0.0f,
+
+      .yaw_rate_setpoint = 0.0f,
+      .yaw_rate_measured = 0.0f,
+
+      .dt = 0.01f
+  };
+
+  FlightController_Init();
+
+  const FlightController_Output *output =
+      FlightController_GetOutput();
+
+  FlightController_Update(&input);
+
+  printf("First:  Roll %.2f\r\n",
+         output->roll_correction);
+
+  FlightController_Update(&input);
+
+  printf("Second: Roll %.2f\r\n",
+         output->roll_correction);
+
+  input.roll_measured = 9.0f;
+
+  FlightController_Update(&input);
+
+  printf("Third:  Roll %.2f\r\n",
+         output->roll_correction);
+
+  FlightController_Reset();
+
+  FlightController_Update(&input);
+
+    printf("Third:  Roll %.2f\r\n",
+           output->roll_correction);
+
+
+
+
+
+
 
 
   /* USER CODE END 2 */
@@ -296,38 +348,48 @@ int main(void)
 //                     dshot_last_status);
 //          }
 
-          if (imuUpdateFlag)
-          {
-              imuUpdateFlag = 0;
+//          if (imuUpdateFlag)
+//          {
+//              imuUpdateFlag = 0;
+//
+//              MPU6050_Read();
+//
+//              Mahony_UpdateIMU(
+//                  Gx - GxOffset,
+//                  Gy - GyOffset,
+//                  Gz - GzOffset,
+//                  Ax, Ay, Az,
+//                  0.01f
+//              );
+//
+//              Mahony_GetEuler(&roll, &pitch, &yaw);
+//
+//              DShot_Send(0, 48, 500, 2047);
+//          }
+//
+//
+//      if (HAL_GetTick() - lastPrintTime >= 50)
+//        {
+//
+//            lastPrintTime = HAL_GetTick();
+//
+//
+//        }
 
-              MPU6050_Read();
+//      const uint16_t *channels = CRSF_GetChannels();
+//
+//      RCInput_Update(channels);
+//
+//      const RC_Setpoints *setpoints = RCInput_GetSetpoints();
+//
+//      printf("Roll: %.2f  Pitch: %.2f  Throttle: %u  Yaw: %.2f\r\n",
+//             setpoints->roll_setpoint,
+//             setpoints->pitch_setpoint,
+//             (unsigned int)setpoints->throttle,
+//             setpoints->yaw_rate_setpoint);
+//
+//      HAL_Delay(100);
 
-              Mahony_UpdateIMU(
-                  Gx - GxOffset,
-                  Gy - GyOffset,
-                  Gz - GzOffset,
-                  Ax, Ay, Az,
-                  0.01f
-              );
-
-              Mahony_GetEuler(&roll, &pitch, &yaw);
-
-              DShot_Send(0, 48, 500, 2047);
-          }
-
-
-      if (HAL_GetTick() - lastPrintTime >= 50)
-        {
-
-            lastPrintTime = HAL_GetTick();
-
-//            printf("A: %.2f %.2f %.2f | G: %.2f %.2f %.2f | RPY: %.2f %.2f %.2f\r\n",
-//                 Ax, Ay, Az,
-//                 Gx - GxOffset,
-//                 Gy - GyOffset,
-//                 Gz - GzOffset,
-//                 roll, pitch, yaw);
-        }
 
   }
 
