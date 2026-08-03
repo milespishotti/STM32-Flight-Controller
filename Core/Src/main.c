@@ -225,6 +225,9 @@ int main(void)
   FlightData flight_data;
 
 
+
+
+
   /* USER CODE END 2 */
 
   /* Infinite loop */

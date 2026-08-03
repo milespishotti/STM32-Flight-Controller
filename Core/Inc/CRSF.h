@@ -26,6 +26,9 @@ uint32_t CRSF_GetValidFrameCount(void);
 
 void CRSF_FrameGenerator(const uint16_t channels[16], uint8_t frame[26]);
 
+void CRSF_TestFunction(const uint8_t *data, uint16_t length);
+
+
 void CRSF_TestFrame(const uint8_t frame[26]);
 
 #endif /* INC_CRSF_H_ */

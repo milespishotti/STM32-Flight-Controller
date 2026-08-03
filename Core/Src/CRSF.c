@@ -48,25 +48,100 @@ void CRSF_Init(void)
 }
 
 
+
+
+const uint16_t *CRSF_GetChannels(void)
+{
+    return channels;
+}
+
+static uint8_t stream_buffer[128] = {0};
+static uint16_t num_bytes_stored = 0;
+
+static void CRSF_ProcessBytes(const uint8_t *byte_array, uint16_t num_bytes)
+{
+    uint16_t byte_array_index = 0;
+
+    while ((num_bytes_stored < 128) && (byte_array_index < num_bytes))
+    {
+        stream_buffer[num_bytes_stored] = byte_array[byte_array_index];
+        num_bytes_stored++;
+        byte_array_index++;
+    }
+
+    uint16_t scan_index = 0;
+
+    while (scan_index < num_bytes_stored)
+    {
+        if (stream_buffer[scan_index] == CRSF_ADDRESS_FLIGHT_CONTROLLER)
+        {
+            if (num_bytes_stored - scan_index < CRSF_RC_FRAME_SIZE)
+            {
+                uint16_t bytes_left = num_bytes_stored - scan_index;
+
+                for (int j = 0; j < bytes_left; j ++)
+                {
+                    stream_buffer[j] = stream_buffer[scan_index + j];
+                }
+                num_bytes_stored = bytes_left;
+                return;
+            }
+
+            if (stream_buffer[scan_index + 1] != CRSF_RC_FRAME_LENGTH_FIELD)
+            {
+                scan_index++;
+                continue;
+            }
+
+            if (stream_buffer[scan_index + 2] != CRSF_FRAME_TYPE_RC_CHANNELS)
+            {
+                scan_index++;
+                continue;
+            }
+
+            uint8_t calculated_crc = CRSF_CalculateCRC(&stream_buffer[scan_index + 2], 23);
+
+            if (calculated_crc != stream_buffer[scan_index + 25])
+            {
+                scan_index++;
+                continue;
+            }
+
+            CRSF_UpdateChannels(&stream_buffer[scan_index + 3]);
+
+            valid_frame_count++;
+
+            uint16_t bytes_left = num_bytes_stored - scan_index - CRSF_RC_FRAME_SIZE;
+
+            for (int j = 0; j < bytes_left; j++)
+            {
+                stream_buffer[j] = stream_buffer[j + scan_index + CRSF_RC_FRAME_SIZE];
+            }
+
+            num_bytes_stored = bytes_left;
+            scan_index = 0;
+            continue;
+
+
+        }
+        scan_index++;
+    }
+
+    num_bytes_stored = 0;
+}
+
+
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
     if (huart == &huart6)
     {
         crsf_dma_callback_count++;
-        if (CRSF_ParseFrame())
-        {
 
-            valid_frame_count++;
-        }
+        CRSF_ProcessBytes(rx_buffer, CRSF_RC_FRAME_SIZE);
 
 
         HAL_UART_Receive_DMA(&huart6, rx_buffer, CRSF_RC_FRAME_SIZE);
     }
-}
-
-const uint16_t *CRSF_GetChannels(void)
-{
-    return channels;
 }
 
 static bool CRSF_ParseFrame(void)
@@ -87,7 +162,7 @@ static bool CRSF_ParseFrame(void)
 
     if (rx_buffer[2] != CRSF_FRAME_TYPE_RC_CHANNELS)
     {
-        bad_type_count;
+        bad_type_count++;
         return false;
     }
 
@@ -200,14 +275,10 @@ void CRSF_FrameGenerator(const uint16_t channels[CRSF_CHANNEL_COUNT], uint8_t fr
 }
 
 
-void CRSF_TestFrame(const uint8_t frame[26]) {
+void CRSF_TestFunction(const uint8_t *data, uint16_t length) {
 
-    for (int i = 0; i < CRSF_RC_FRAME_SIZE; i ++)
-    {
-        rx_buffer[i] = frame[i];
-    }
 
-    CRSF_ParseFrame();
+    CRSF_ProcessBytes(data, length);
 
 }
 
