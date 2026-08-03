@@ -10,6 +10,8 @@
 
 #include <stdint.h>
 extern volatile uint32_t crsf_dma_callback_count;
+extern volatile uint32_t crsf_dma_size;
+
 
 extern uint32_t bad_address_count;
 extern uint32_t bad_length_count;

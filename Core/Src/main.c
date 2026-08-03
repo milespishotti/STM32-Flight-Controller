@@ -324,9 +324,12 @@ int main(void)
           Logger_ReceiveData(&flight_data);
 
 
-          }
+          };
 
       Logger_ProcessData();
+
+
+
 //      static uint32_t print_counter = 0;
 //
 //      print_counter++;
@@ -334,19 +337,11 @@ int main(void)
 //      if (print_counter >= 100)
 //      {
 //          print_counter = 0;
-//          const uint16_t *channels = CRSF_GetChannels();
-//
-//          printf("DMA:%lu Valid:%lu CH:%u %u %u %u\r\n",
-//                 (unsigned long)crsf_dma_callback_count,
-//                 (unsigned long)CRSF_GetValidFrameCount(),
-//                 channels[0],
-//                 channels[1],
-//                 channels[2],
-//                 channels[3]);
+//          printf("DMA Callbacks triggered by UART idle events: %i   Size: %i \r\n", crsf_dma_callback_count, crsf_dma_size);
 //      }
-
-
-
+//
+//
+//
       }
 
 
