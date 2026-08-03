@@ -9,6 +9,8 @@
 #define INC_CRSF_H_
 
 #include <stdint.h>
+#include <stdbool.h>
+
 extern volatile uint32_t crsf_dma_callback_count;
 extern volatile uint32_t crsf_dma_size;
 
@@ -29,6 +31,8 @@ uint32_t CRSF_GetValidFrameCount(void);
 void CRSF_FrameGenerator(const uint16_t channels[16], uint8_t frame[26]);
 
 void CRSF_TestFunction(const uint8_t *data, uint16_t length);
+
+bool CRSF_IsReceiverValid(void);
 
 
 void CRSF_TestFrame(const uint8_t frame[26]);

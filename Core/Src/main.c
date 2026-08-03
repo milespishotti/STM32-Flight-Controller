@@ -30,6 +30,7 @@
 #include "RCInput.h"
 #include "FlightController.h"
 #include "Logging.h"
+#include "Safety.h"
 
 
 #include <stdio.h>
@@ -228,6 +229,7 @@ int main(void)
 
 
 
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -242,6 +244,7 @@ int main(void)
       {
           ControlLoopFlag = 0;
 
+          Safety_Input safety;
 
           MPU6050_Read();
 
@@ -321,7 +324,19 @@ int main(void)
               .valid_frame_count = CRSF_GetValidFrameCount()
           };
 
-          Logger_ReceiveData(&flight_data);
+//          Logger_ReceiveData(&flight_data);
+
+          static uint32_t print_counter = 0;
+
+               print_counter++;
+
+               if (print_counter >= 100)
+               {
+                   print_counter = 0;
+                   printf("Receiver Valid: %s\tValid Frames: %lu\r\n",
+                          CRSF_IsReceiverValid() ? "TRUE" : "FALSE",
+                          CRSF_GetValidFrameCount());
+               }
 
 
           };
@@ -330,15 +345,7 @@ int main(void)
 
 
 
-//      static uint32_t print_counter = 0;
-//
-//      print_counter++;
-//
-//      if (print_counter >= 100)
-//      {
-//          print_counter = 0;
-//          printf("DMA Callbacks triggered by UART idle events: %i   Size: %i \r\n", crsf_dma_callback_count, crsf_dma_size);
-//      }
+
 //
 //
 //

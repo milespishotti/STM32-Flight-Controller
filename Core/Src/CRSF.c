@@ -21,6 +21,8 @@
 
 #define CRSF_DMA_BUFFER_SIZE 128
 
+#define CRSF_RECEIVER_TIMEOUT_MS 100
+
 extern UART_HandleTypeDef huart6;
 extern DMA_HandleTypeDef hdma_usart6_rx;
 
@@ -38,6 +40,8 @@ static void CRSF_ProcessBytes(const uint8_t *byte_array, uint16_t num_bytes);
 
 
 static volatile uint32_t valid_frame_count = 0;
+
+static volatile uint32_t last_valid_frame = 0;
 
 
 uint32_t bad_address_count = 0;
@@ -57,6 +61,10 @@ void CRSF_Init(void)
 {
 
     HAL_UARTEx_ReceiveToIdle_DMA(&huart6, rx_buffer, CRSF_DMA_BUFFER_SIZE);
+    last_valid_frame = 0;
+    valid_frame_count = 0;
+    last_position = 0;
+    num_bytes_stored = 0;
 }
 
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
@@ -148,6 +156,7 @@ static void CRSF_ProcessBytes(const uint8_t *byte_array, uint16_t num_bytes)
             CRSF_UpdateChannels(&stream_buffer[scan_index + 3]);
 
             valid_frame_count++;
+            last_valid_frame = HAL_GetTick();
 
             uint16_t bytes_left = num_bytes_stored - scan_index - CRSF_RC_FRAME_SIZE;
 
@@ -169,18 +178,19 @@ static void CRSF_ProcessBytes(const uint8_t *byte_array, uint16_t num_bytes)
 }
 
 
-//void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-//{
-//    if (huart == &huart6)
-//    {
-//        crsf_dma_callback_count++;
-//
-//        CRSF_ProcessBytes(rx_buffer, CRSF_RC_FRAME_SIZE);
-//
-//
-//        HAL_UART_Receive_DMA(&huart6, rx_buffer, CRSF_RC_FRAME_SIZE);
-//    }
-//}
+bool CRSF_IsReceiverValid(void)
+{
+    uint32_t time_diff = HAL_GetTick() - last_valid_frame;
+    if ((time_diff < CRSF_RECEIVER_TIMEOUT_MS) && (valid_frame_count > 0))
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+
+}
 
 
 

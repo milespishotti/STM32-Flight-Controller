@@ -8,6 +8,9 @@
 #include "RCInput.h"
 #include <stdint.h>
 #include <math.h>
+#include <stdbool.h>
+
+#define RC_ARM_THRESHOLD 992U
 
 
 static RC_Setpoints setpoints;
@@ -33,12 +36,16 @@ void RCInput_Update(const uint16_t channels[CRSF_CHANNEL_COUNT])
     uint16_t raw_pitch = channels[1];
     uint16_t raw_throttle = channels[2];
     uint16_t raw_yaw_rate = channels[3];
+    uint16_t raw_arm_channel = channels[4];
 
 
     raw_roll = RCInput_ClampChannels(raw_roll);
     raw_pitch = RCInput_ClampChannels(raw_pitch);
     raw_yaw_rate = RCInput_ClampChannels(raw_yaw_rate);
     raw_throttle = RCInput_ClampChannels(raw_throttle);
+    raw_arm_channel = RCInput_ClampChannels(raw_arm_channel);
+
+    bool arm_requested = raw_arm_channel > RC_ARM_THRESHOLD;
 
 
     /* Normalize stick inputs */
@@ -46,6 +53,8 @@ void RCInput_Update(const uint16_t channels[CRSF_CHANNEL_COUNT])
     float normalized_pitch = (raw_pitch - 992.0f) / 819.0f;
     float normalized_yaw_rate = (raw_yaw_rate - 992.0f) / 819.0f;
     float normalized_throttle = (raw_throttle - 172.0f) / (1811.0f - 172.0f);
+
+
 
     /* Convert to controller setpoints */
     float roll_setpoint = normalized_roll * 30.0f;
@@ -77,6 +86,7 @@ void RCInput_Update(const uint16_t channels[CRSF_CHANNEL_COUNT])
     setpoints.pitch_setpoint = pitch_setpoint;
     setpoints.yaw_rate_setpoint = yaw_rate_setpoint;
     setpoints.throttle = (uint16_t)throttle_setpoint;
+    setpoints.arm_requested = arm_requested;
 }
 
 
@@ -86,4 +96,8 @@ const RC_Setpoints *RCInput_GetSetpoints(void)
     return &setpoints;
 }
 
+
+void RCInput_TestFunction(void)
+{
+}
 
