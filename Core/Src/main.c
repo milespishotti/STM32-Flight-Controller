@@ -181,6 +181,8 @@ int main(void)
 
   CRSF_Init();
 
+  Safety_Init();
+
   /*
    * Establish an initial attitude before starting the control timer.
    */
@@ -279,6 +281,12 @@ int main(void)
           const RC_Setpoints *setpoints =
                   RCInput_GetSetpoints();
 
+          safety.arm_requested = setpoints->arm_requested;
+          safety.receiver_valid = CRSF_IsReceiverValid();
+          safety.throttle = setpoints->throttle;
+
+          Safety_Update(&safety);
+
           FlightController_Input controller_input = {
                   .roll_setpoint = setpoints->roll_setpoint,
                   .pitch_setpoint = setpoints->pitch_setpoint,
@@ -291,22 +299,31 @@ int main(void)
                   .dt = 0.01f
           };
 
-          FlightController_Update(&controller_input);
 
-          const FlightController_Output *controller_output =
-                  FlightController_GetOutput();
+         FlightController_Update(&controller_input);
 
-          MotorOutputs motor_output = MotorMixer_Mix(
-                  (int16_t)controller_output->roll_correction,
-                  (int16_t)controller_output->pitch_correction,
-                  (int16_t)controller_output->yaw_rate_correction,
-                  setpoints->throttle);
+         const FlightController_Output *controller_output =
+                 FlightController_GetOutput();
 
-          DShot_Send(
-                  motor_output.m1,
-                  motor_output.m2,
-                  motor_output.m3,
-                  motor_output.m4);
+         MotorOutputs motor_output = MotorMixer_Mix(
+                 (int16_t)controller_output->roll_correction,
+                 (int16_t)controller_output->pitch_correction,
+                 (int16_t)controller_output->yaw_rate_correction,
+                 setpoints->throttle);
+
+          if (Safety_IsArmed())
+          {
+              DShot_Send(
+                      motor_output.m1,
+                      motor_output.m2,
+                      motor_output.m3,
+                      motor_output.m4);
+          }
+          else
+          {
+              FlightController_Reset();
+              DShot_Send(0, 0, 0, 0);
+          }
 
 
           flight_data = (FlightData) {
@@ -324,22 +341,22 @@ int main(void)
               .valid_frame_count = CRSF_GetValidFrameCount()
           };
 
-//          Logger_ReceiveData(&flight_data);
+          Logger_ReceiveData(&flight_data);
 
-          static uint32_t print_counter = 0;
+//          static uint32_t print_counter = 0;
+//
+//               print_counter++;
+//
+//               if (print_counter >= 100)
+//               {
+//                   print_counter = 0;
+//                   printf("Receiver Valid: %s\tValid Frames: %lu\r\n",
+//                          CRSF_IsReceiverValid() ? "TRUE" : "FALSE",
+//                          CRSF_GetValidFrameCount());
+//               }
 
-               print_counter++;
 
-               if (print_counter >= 100)
-               {
-                   print_counter = 0;
-                   printf("Receiver Valid: %s\tValid Frames: %lu\r\n",
-                          CRSF_IsReceiverValid() ? "TRUE" : "FALSE",
-                          CRSF_GetValidFrameCount());
-               }
-
-
-          };
+          }
 
       Logger_ProcessData();
 
