@@ -31,7 +31,7 @@ void Safety_Update(const Safety_Input *input)
     }
 
 
-    if (input->receiver_valid == false)
+    if ((input->receiver_valid == false) || (input->sensor_valid == false))
     {
         armed = false;
         armed_switch_ready = false;

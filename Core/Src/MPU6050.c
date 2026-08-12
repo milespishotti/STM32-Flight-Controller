@@ -13,11 +13,19 @@
  *      Author: miles
  */
 
+/* SCL = PB8 / D15
+ * SDA = PB9 / D14
+ *
+ *
+ * orient MPU6050 with right angle headers facing the nose of the drone and led on the left
+ */
+
 
 #include "MPU6050.h"
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
+
 
 #define MPU6050_ADDR (0x68 << 1)
 #define WHO_AM_I (0x75)
@@ -89,39 +97,62 @@ uint8_t MPU6050_Init(void)
 }
 
 
-void MPU6050_Read (void)
+bool MPU6050_Read (void)
 {
-    uint8_t RecDataAccel[6];
-    uint8_t RecDataGyro[6];
+//    uint8_t RecDataAccel[6];
+//    uint8_t RecDataGyro[6];
+//
+//    HAL_StatusTypeDef status1;
+//    HAL_StatusTypeDef status2;
+//
+//    status1 = HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, ACCEL_XOUT_H, 1, RecDataAccel, 6, 2);
+//    status2 = HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, GYRO_XOUT_H, 1, RecDataGyro, 6, 2);
+//
+//    if (status1 != HAL_OK || status2 != HAL_OK)
+//    {
+//        printf("MPU read failed: accel = %d, gyro = %d\r\n", status1, status2);
+//        return;
+//    }
 
-    HAL_StatusTypeDef status1;
-    HAL_StatusTypeDef status2;
+//    int16_t Accel_X_Raw = (RecDataAccel[0] << 8 | RecDataAccel[1]);
+    //    int16_t Accel_Y_Raw = (RecDataAccel[2] << 8 | RecDataAccel[3]);
+    //    int16_t Accel_Z_Raw = (RecDataAccel[4] << 8 | RecDataAccel[5]);
+    //
+    //    int16_t Gyro_X_Raw = (RecDataGyro[0] << 8 | RecDataGyro[1]);
+    //    int16_t Gyro_Y_Raw = (RecDataGyro[2] << 8 | RecDataGyro[3]);
+    //    int16_t Gyro_Z_Raw = (RecDataGyro[4] << 8 | RecDataGyro[5]);
 
-    status1 = HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, ACCEL_XOUT_H, 1, RecDataAccel, 6, 50);
-    status2 = HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, GYRO_XOUT_H, 1, RecDataGyro, 6, 50);
+    uint8_t RecData[14];
 
-    if (status1 != HAL_OK || status2 != HAL_OK)
+    HAL_StatusTypeDef status;
+
+
+    status = HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, ACCEL_XOUT_H, 1, RecData, 14, 2);
+
+    if (status != HAL_OK)
     {
-        printf("MPU read failed: accel = %d, gyro = %d\r\n", status1, status2);
-        return;
+        return false;
     }
 
 
-    int16_t Accel_X_Raw = (RecDataAccel[0] << 8 | RecDataAccel[1]);
-    int16_t Accel_Y_Raw = (RecDataAccel[2] << 8 | RecDataAccel[3]);
-    int16_t Accel_Z_Raw = (RecDataAccel[4] << 8 | RecDataAccel[5]);
 
-    int16_t Gyro_X_Raw = (RecDataGyro[0] << 8 | RecDataGyro[1]);
-    int16_t Gyro_Y_Raw = (RecDataGyro[2] << 8 | RecDataGyro[3]);
-    int16_t Gyro_Z_Raw = (RecDataGyro[4] << 8 | RecDataGyro[5]);
+    int16_t Accel_X_Raw = (int16_t)(RecData[0] << 8) | RecData[1];
+    int16_t Accel_Y_Raw = (int16_t)(RecData[2] << 8) | RecData[3];
+    int16_t Accel_Z_Raw = (int16_t)(RecData[4] << 8) | RecData[5];
 
-    Ax = Accel_X_Raw / 16384.0;
-    Ay = Accel_Y_Raw / 16384.0;
-    Az = Accel_Z_Raw / 16384.0;
+    int16_t Gyro_X_Raw = (int16_t)(RecData[8] << 8) | RecData[9];
+    int16_t Gyro_Y_Raw = (int16_t)(RecData[10] << 8) | RecData[11];
+    int16_t Gyro_Z_Raw = (int16_t)(RecData[12] << 8) | RecData[13];
 
-    Gx = Gyro_X_Raw / 131.0;
-    Gy = Gyro_Y_Raw / 131.0;
-    Gz = Gyro_Z_Raw / 131.0;
+    Ax = Accel_X_Raw / 16384.0f;
+    Ay = Accel_Y_Raw / 16384.0f;
+    Az = Accel_Z_Raw / 16384.0f;
+
+    Gx = Gyro_X_Raw / 131.0f;
+    Gy = Gyro_Y_Raw / 131.0f;
+    Gz = Gyro_Z_Raw / 131.0f;
+
+    return true;
 }
 
 void Calibrate_MPU6050 (void)

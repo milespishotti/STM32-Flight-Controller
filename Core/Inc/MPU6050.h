@@ -9,11 +9,13 @@
 #define INC_MPU6050_H_
 
 #include "main.h"
+#include <stdbool.h>
 
 uint8_t MPU6050_Init(void);
-void MPU6050_Read(void);
+bool MPU6050_Read(void);
 void Calibrate_MPU6050(void);
 void Update_Angle(void);
+
 
 extern float Ax, Ay, Az;
 extern float Gx, Gy, Gz;

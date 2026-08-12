@@ -16,6 +16,7 @@ typedef struct
     bool arm_requested;
     uint16_t throttle;
     bool receiver_valid;
+    bool sensor_valid;
 } Safety_Input;
 
 void Safety_Init(void);

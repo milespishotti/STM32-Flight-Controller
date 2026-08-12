@@ -9,6 +9,7 @@
 #define INC_LOGGING_H_
 
 #include <stdint.h>
+#include <stdbool.h>
 
 
 typedef struct
@@ -27,7 +28,19 @@ typedef struct
 
     uint16_t throttle;
 
+    uint16_t motor1;
+    uint16_t motor2;
+    uint16_t motor3;
+    uint16_t motor4;
+
     uint32_t valid_frame_count;
+
+    bool receiver_valid;
+    bool sensor_valid;
+    bool arm_requested;
+    bool armed;
+
+
 } FlightData;
 
 

@@ -18,10 +18,12 @@
  *
  * Motor Naming Convention (when viewing from top)
  *
- * M1 = upper left motor
- * M2 = upper right motor
- * M3 = lower right motor
- * M4 = lower left motor
+ * M1 = upper left motor = D7 / PA8
+ * M2 = upper right motor = D8 / PA9
+ * M3 = lower right motor = D2 / PA10
+ * M4 = lower left motor = Right Male In line with D12 / PA11
+ *
+ *
  *
  *
  *

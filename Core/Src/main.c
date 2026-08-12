@@ -176,13 +176,13 @@ int main(void)
 
   Mahony_Init();
   Mahony_SetGains(3.15f, 0.0f);
-
-  FlightController_Init();
-
-  CRSF_Init();
-
-  Safety_Init();
-
+//
+//  FlightController_Init();
+//
+//  CRSF_Init();
+//
+//  Safety_Init();
+//
   /*
    * Establish an initial attitude before starting the control timer.
    */
@@ -216,15 +216,15 @@ int main(void)
          pitchOffset);
 
   printf("Calibration complete\r\n");
-
-
-  Logger_Reset();
-
+//
+//
+//  Logger_Reset();
+//
   if (HAL_TIM_Base_Start_IT(&htim2) != HAL_OK)
   {
       Error_Handler();
   }
-
+//
   FlightData flight_data;
 
 
@@ -248,29 +248,39 @@ int main(void)
 
           Safety_Input safety;
 
-          MPU6050_Read();
+          bool imu_valid = MPU6050_Read();
 
-          float correctedGx = Gx - GxOffset;
-          float correctedGy = Gy - GyOffset;
-          float correctedGz = Gz - GzOffset;
+          float correctedGx = 0.0f;
+          float correctedGy = 0.0f;
+          float correctedGz = 0.0f;
 
-          Mahony_UpdateIMU(
-                  correctedGx,
-                  correctedGy,
-                  correctedGz,
-                  Ax,
-                  Ay,
-                  Az,
-                  0.01f);
+          float roll = 0.0f;
+          float pitch = 0.0f;
+          float yaw = 0.0f;
 
-          float roll;
-          float pitch;
-          float yaw;
+          if (imu_valid == true)
+          {
 
-          Mahony_GetEuler(&roll, &pitch, &yaw);
+              correctedGx = Gx - GxOffset;
+              correctedGy = Gy - GyOffset;
+              correctedGz = Gz - GzOffset;
 
-          roll -= rollOffset;
-          pitch -= pitchOffset;
+              Mahony_UpdateIMU(
+                      correctedGx,
+                      correctedGy,
+                      correctedGz,
+                      Ax,
+                      Ay,
+                      Az,
+                      0.01f);
+
+
+
+              Mahony_GetEuler(&roll, &pitch, &yaw);
+
+              roll -= rollOffset;
+              pitch -= pitchOffset;
+          }
 
           const uint16_t *channels = CRSF_GetChannels();
 
@@ -284,6 +294,7 @@ int main(void)
           safety.arm_requested = setpoints->arm_requested;
           safety.receiver_valid = CRSF_IsReceiverValid();
           safety.throttle = setpoints->throttle;
+          safety.sensor_valid = imu_valid;
 
           Safety_Update(&safety);
 
@@ -338,27 +349,73 @@ int main(void)
               .yaw_rate_correction = controller_output->yaw_rate_correction,
 
               .throttle = setpoints->throttle,
-              .valid_frame_count = CRSF_GetValidFrameCount()
+
+              .motor1 = motor_output.m1,
+              .motor2 = motor_output.m2,
+              .motor3 = motor_output.m3,
+              .motor4 = motor_output.m4,
+
+              .valid_frame_count = CRSF_GetValidFrameCount(),
+
+              .receiver_valid = safety.receiver_valid,
+              .sensor_valid = safety.sensor_valid,
+              .arm_requested = safety.arm_requested,
+              .armed = Safety_IsArmed()
+
           };
 
           Logger_ReceiveData(&flight_data);
 
-//          static uint32_t print_counter = 0;
+
+
+  }
+
+   Logger_ProcessData();
+
+
+      /* Test Control Loop
+      if (ControlLoopFlag)
+      {
+          ControlLoopFlag = 0;
+
+          MPU6050_Read();
+
+                    float correctedGx = Gx - GxOffset;
+                    float correctedGy = Gy - GyOffset;
+                    float correctedGz = Gz - GzOffset;
+
+                    Mahony_UpdateIMU(
+                            correctedGx,
+                            correctedGy,
+                            correctedGz,
+                            Ax,
+                            Ay,
+                            Az,
+                            0.01f);
+
+                    float roll;
+                    float pitch;
+                    float yaw;
+
+                    Mahony_GetEuler(&roll, &pitch, &yaw);
+
+                    roll -= rollOffset;
+                    pitch -= pitchOffset;
+
+                    printf("Roll: %.2f\tPitch: %.2f\tYaw: %.2f\r\n",
+                           roll,
+                           pitch,
+                           yaw);
+
+
+
+      }
+      */
 //
-//               print_counter++;
-//
-//               if (print_counter >= 100)
-//               {
-//                   print_counter = 0;
-//                   printf("Receiver Valid: %s\tValid Frames: %lu\r\n",
-//                          CRSF_IsReceiverValid() ? "TRUE" : "FALSE",
-//                          CRSF_GetValidFrameCount());
-//               }
 
 
-          }
 
-      Logger_ProcessData();
+
 
 
 

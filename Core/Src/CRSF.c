@@ -5,6 +5,13 @@
  *      Author: miles
  */
 
+
+/* Receiver Pins
+ *
+ * TX = PC6 / Right Male next to D15 /. PB8
+ * RX = PC7 / D9
+ */
+
 #include "CRSF.h"
 #include "main.h"
 #include "debug.h"
