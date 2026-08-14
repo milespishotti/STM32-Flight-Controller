@@ -54,6 +54,8 @@ extern I2C_HandleTypeDef hi2c1;
 
 uint8_t MPU6050_Init(void)
 {
+
+
     uint8_t check = 0;
 
 
