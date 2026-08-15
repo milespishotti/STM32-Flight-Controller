@@ -209,11 +209,11 @@ int main(void)
   Mahony_Init();
   Mahony_SetGains(3.15f, 0.0f);
 //
-//  FlightController_Init();
-//
-//  CRSF_Init();
-//
-//  Safety_Init();
+  FlightController_Init();
+
+  CRSF_Init();
+
+  Safety_Init();
 //
   /*
    * Establish an initial attitude before starting the control timer.
@@ -274,174 +274,230 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 
-//      if (ControlLoopFlag)
-//      {
-//          ControlLoopFlag = 0;
-//
-//          Safety_Input safety;
-//
-//          bool imu_valid = MPU6050_Read();
-//
-//          float correctedGx = 0.0f;
-//          float correctedGy = 0.0f;
-//          float correctedGz = 0.0f;
-//
-//          float roll = 0.0f;
-//          float pitch = 0.0f;
-//          float yaw = 0.0f;
-//
-//          if (imu_valid == true)
-//          {
-//
-//              correctedGx = Gx - GxOffset;
-//              correctedGy = Gy - GyOffset;
-//              correctedGz = Gz - GzOffset;
-//
-//              Mahony_UpdateIMU(
-//                      correctedGx,
-//                      correctedGy,
-//                      correctedGz,
-//                      Ax,
-//                      Ay,
-//                      Az,
-//                      0.01f);
-//
-//
-//
-//              Mahony_GetEuler(&roll, &pitch, &yaw);
-//
-//              roll -= rollOffset;
-//              pitch -= pitchOffset;
-//          }
-//
-//          const uint16_t *channels = CRSF_GetChannels();
-//
-//          valid_frame_count = CRSF_GetValidFrameCount();
-//
-//          RCInput_Update(channels);
-//
-//          const RC_Setpoints *setpoints =
-//                  RCInput_GetSetpoints();
-//
-//          safety.arm_requested = setpoints->arm_requested;
-//          safety.receiver_valid = CRSF_IsReceiverValid();
-//          safety.throttle = setpoints->throttle;
-//          safety.sensor_valid = imu_valid;
-//
-//          Safety_Update(&safety);
-//
-//          FlightController_Input controller_input = {
-//                  .roll_setpoint = setpoints->roll_setpoint,
-//                  .pitch_setpoint = setpoints->pitch_setpoint,
-//                  .yaw_rate_setpoint = setpoints->yaw_rate_setpoint,
-//
-//                  .roll_measured = roll,
-//                  .pitch_measured = pitch,
-//                  .yaw_rate_measured = correctedGz,
-//
-//                  .dt = 0.01f
-//          };
-//
-//
-//         FlightController_Update(&controller_input);
-//
-//         const FlightController_Output *controller_output =
-//                 FlightController_GetOutput();
-//
-//         MotorOutputs motor_output = MotorMixer_Mix(
-//                 (int16_t)controller_output->roll_correction,
-//                 (int16_t)controller_output->pitch_correction,
-//                 (int16_t)controller_output->yaw_rate_correction,
-//                 setpoints->throttle);
-//
-//          if (Safety_IsArmed())
-//          {
-//              DShot_Send(
-//                      motor_output.m1,
-//                      motor_output.m2,
-//                      motor_output.m3,
-//                      motor_output.m4);
-//          }
-//          else
-//          {
-//              FlightController_Reset();
-//              DShot_Send(0, 0, 0, 0);
-//          }
-//
-//
-//          flight_data = (FlightData) {
-//              .roll_measured = roll,
-//              .pitch_measured = pitch,
-//              .yaw_rate_measured = correctedGz,
-//              .roll_setpoint = setpoints->roll_setpoint,
-//              .pitch_setpoint = setpoints->pitch_setpoint,
-//              .yaw_rate_setpoint = setpoints->yaw_rate_setpoint,
-//              .roll_correction = controller_output->roll_correction,
-//              .pitch_correction = controller_output->pitch_correction,
-//              .yaw_rate_correction = controller_output->yaw_rate_correction,
-//
-//              .throttle = setpoints->throttle,
-//
-//              .motor1 = motor_output.m1,
-//              .motor2 = motor_output.m2,
-//              .motor3 = motor_output.m3,
-//              .motor4 = motor_output.m4,
-//
-//              .valid_frame_count = CRSF_GetValidFrameCount(),
-//
-//              .receiver_valid = safety.receiver_valid,
-//              .sensor_valid = safety.sensor_valid,
-//              .arm_requested = safety.arm_requested,
-//              .armed = Safety_IsArmed()
-//
-//          };
-//
-//          Logger_ReceiveData(&flight_data);
-//
-//
-//
-//  }
-//
-//   Logger_ProcessData();
-
-
-      /* Test Control Loop */
       if (ControlLoopFlag)
       {
           ControlLoopFlag = 0;
 
-          MPU6050_Read();
+          HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10, GPIO_PIN_SET);
 
-                    float correctedGx = Gx - GxOffset;
-                    float correctedGy = Gy - GyOffset;
-                    float correctedGz = Gz - GzOffset;
+          Safety_Input safety;
 
-                    Mahony_UpdateIMU(
-                            correctedGx,
-                            correctedGy,
-                            correctedGz,
-                            Ax,
-                            Ay,
-                            Az,
-                            0.01f);
+          bool imu_valid = MPU6050_Read();
 
-                    float roll;
-                    float pitch;
-                    float yaw;
+          float correctedGx = 0.0f;
+          float correctedGy = 0.0f;
+          float correctedGz = 0.0f;
 
-                    Mahony_GetEuler(&roll, &pitch, &yaw);
+          float roll = 0.0f;
+          float pitch = 0.0f;
+          float yaw = 0.0f;
 
-                    roll -= rollOffset;
-                    pitch -= pitchOffset;
+          if (imu_valid == true)
+          {
 
-                    printf("Roll: %.2f\tPitch: %.2f\tYaw: %.2f\r\n",
-                           roll,
-                           pitch,
-                           yaw);
+              correctedGx = Gx - GxOffset;
+              correctedGy = Gy - GyOffset;
+              correctedGz = Gz - GzOffset;
+
+              Mahony_UpdateIMU(
+                      correctedGx,
+                      correctedGy,
+                      correctedGz,
+                      Ax,
+                      Ay,
+                      Az,
+                      0.01f);
 
 
 
-      }
+              Mahony_GetEuler(&roll, &pitch, &yaw);
+
+              roll -= rollOffset;
+              pitch -= pitchOffset;
+          }
+
+          const uint16_t *channels = CRSF_GetChannels();
+
+          valid_frame_count = CRSF_GetValidFrameCount();
+
+          RCInput_Update(channels);
+
+          const RC_Setpoints *setpoints =
+                  RCInput_GetSetpoints();
+
+          safety.arm_requested = setpoints->arm_requested;
+          safety.receiver_valid = CRSF_IsReceiverValid();
+          safety.throttle = setpoints->throttle;
+          safety.sensor_valid = imu_valid;
+
+          Safety_Update(&safety);
+
+          FlightController_Input controller_input = {
+                  .roll_setpoint = setpoints->roll_setpoint,
+                  .pitch_setpoint = setpoints->pitch_setpoint,
+                  .yaw_rate_setpoint = setpoints->yaw_rate_setpoint,
+
+                  .roll_measured = roll,
+                  .pitch_measured = pitch,
+                  .yaw_rate_measured = correctedGz,
+
+                  .dt = 0.01f
+          };
+
+
+         FlightController_Update(&controller_input);
+
+         const FlightController_Output *controller_output =
+                 FlightController_GetOutput();
+
+         MotorOutputs motor_output = MotorMixer_Mix(
+                 (int16_t)controller_output->roll_correction,
+                 (int16_t)controller_output->pitch_correction,
+                 (int16_t)controller_output->yaw_rate_correction,
+                 setpoints->throttle);
+
+          if (Safety_IsArmed())
+          {
+              DShot_Send(
+                      motor_output.m1,
+                      motor_output.m2,
+                      motor_output.m3,
+                      motor_output.m4);
+          }
+          else
+          {
+              FlightController_Reset();
+              DShot_Send(0, 0, 0, 0);
+          }
+
+
+          flight_data = (FlightData) {
+              .roll_measured = roll,
+              .pitch_measured = pitch,
+              .yaw_rate_measured = correctedGz,
+              .roll_setpoint = setpoints->roll_setpoint,
+              .pitch_setpoint = setpoints->pitch_setpoint,
+              .yaw_rate_setpoint = setpoints->yaw_rate_setpoint,
+              .roll_correction = controller_output->roll_correction,
+              .pitch_correction = controller_output->pitch_correction,
+              .yaw_rate_correction = controller_output->yaw_rate_correction,
+
+              .throttle = setpoints->throttle,
+
+              .motor1 = motor_output.m1,
+              .motor2 = motor_output.m2,
+              .motor3 = motor_output.m3,
+              .motor4 = motor_output.m4,
+
+              .valid_frame_count = CRSF_GetValidFrameCount(),
+
+              .receiver_valid = safety.receiver_valid,
+              .sensor_valid = safety.sensor_valid,
+              .arm_requested = safety.arm_requested,
+              .armed = Safety_IsArmed()
+
+          };
+
+          Logger_ReceiveData(&flight_data);
+
+          HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10, GPIO_PIN_RESET);
+
+
+
+  }
+
+//   Logger_ProcessData();
+
+
+      /* Test Control Loop */
+//      if (ControlLoopFlag)
+//      {
+//          ControlLoopFlag = 0;
+//
+//          uint32_t before = HAL_GetTick();
+//
+//          bool valid = MPU6050_Read();
+//
+//          uint32_t after = HAL_GetTick();
+//
+//          printf("valid=%d read_ms=%lu\r\n", valid, after - before);
+//         if (valid)
+//         {
+//
+//                    float correctedGx = Gx - GxOffset;
+//                    float correctedGy = Gy - GyOffset;
+//                    float correctedGz = Gz - GzOffset;
+//
+//                    Mahony_UpdateIMU(
+//                            correctedGx,
+//                            correctedGy,
+//                            correctedGz,
+//                            Ax,
+//                            Ay,
+//                            Az,
+//                            0.01f);
+//
+//                    float roll;
+//                    float pitch;
+//                    float yaw;
+//
+//                    Mahony_GetEuler(&roll, &pitch, &yaw);
+//
+//                    roll -= rollOffset;
+//                    pitch -= pitchOffset;
+//
+//                    const uint16_t *channels = CRSF_GetChannels();
+//                    //
+//                              valid_frame_count = CRSF_GetValidFrameCount();
+//
+//                              RCInput_Update(channels);
+//
+//                              const RC_Setpoints *setpoints =
+//                                      RCInput_GetSetpoints();
+//
+//
+//                              DShot_Send(68, 68, 68, 68);
+//
+//
+//
+////                    bool imu_valid = MPU6050_Read();
+//////
+////                    printf("valid=%d | Ax=%.3f Ay=%.3f Az=%.3f | Gx=%.3f Gy=%.3f Gz=%.3f\r\n",
+////                           imu_valid,
+////                           Ax, Ay, Az,
+////                           Gx, Gy, Gz);
+//                    printf("Roll: %.2f\tPitch: %.2f\tYaw: %.2f\r\n",
+//                           roll,
+//                           pitch,
+//                           yaw);
+//
+//                    printf("CRSF frames: %lu\r\n", valid_frame_count);
+//
+////                    printf("CH: R=%u P=%u T=%u Y=%u ARM=%u\r\n",
+////                           channels[0],
+////                           channels[1],
+////                           channels[2],
+////                           channels[3],
+////                           channels[4]);
+//
+//                    printf("SP: Roll=%.2f Pitch=%.2f YawRate=%.2f Throttle=%u Arm=%d\r\n",
+//                           setpoints->roll_setpoint,
+//                           setpoints->pitch_setpoint,
+//                           setpoints->yaw_rate_setpoint,
+//                           setpoints->throttle,
+//                           setpoints->arm_requested);
+//         }
+//         else
+//         {
+//             printf("MPU READ FAIL | HAL err=0x%08lX | SDA=%d SCL=%d\r\n",
+//                    HAL_I2C_GetError(&hi2c1),
+//                    HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_9),
+//                    HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_8));
+//         }
+//
+//
+//
+//      }
 
 //
 
@@ -783,6 +839,9 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
 
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10, GPIO_PIN_RESET);
+
   /*Configure GPIO pin : B1_Pin */
   GPIO_InitStruct.Pin = B1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
@@ -795,6 +854,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PC10 */
+  GPIO_InitStruct.Pin = GPIO_PIN_10;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 

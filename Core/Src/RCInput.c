@@ -59,7 +59,7 @@ void RCInput_Update(const uint16_t channels[CRSF_CHANNEL_COUNT])
     /* Convert to controller setpoints */
     float roll_setpoint = normalized_roll * 30.0f;
     float pitch_setpoint = normalized_pitch * 30.0f;
-    float yaw_rate_setpoint = normalized_yaw_rate * 150.0f;
+    float yaw_rate_setpoint = normalized_yaw_rate * 75.0f;
     float throttle_setpoint = 48.0f + normalized_throttle * (2047.0f - 48.0f);
 
     /* Deadband */

@@ -32,7 +32,17 @@ void Logger_Reset(void)
         .yaw_rate_correction = 0.0f,
 
         .throttle = 0,
-        .valid_frame_count = 0
+        .valid_frame_count = 0,
+
+        .motor1 = 0,
+        .motor2 = 0,
+        .motor3 = 0,
+        .motor4 = 0,
+
+        .receiver_valid = false,
+        .sensor_valid = false,
+        .arm_requested = false,
+        .armed = false
     };
 
 
@@ -81,6 +91,14 @@ void Logger_ProcessData(void)
            data_storage.yaw_rate_correction,
            data_storage.throttle,
            (unsigned long)data_storage.valid_frame_count);
+
+    printf("M1:%u M2:%u M3:%u M4:%u\r\n",
+           data_storage.motor1,
+           data_storage.motor2,
+           data_storage.motor3,
+           data_storage.motor4);
+
+    printf("Receiver: %i Sensor: %i Arm_Requested: %i Arm: %i\r\n", data_storage.receiver_valid, data_storage.sensor_valid, data_storage.arm_requested, data_storage.armed);
 
 }
 
