@@ -7,6 +7,18 @@
 
 #include "SDCard.h"
 
+static uint8_t test_block[512];
+static uint8_t readback_block[512];
+
+static void SD_CreateTestBuffer(void)
+{
+    for (int i = 0; i < 512; i++)
+    {
+        test_block[i] = i & 0xFF;
+    }
+}
+
+
 
 static void SD_Select(void)
 {
@@ -160,11 +172,145 @@ bool SDCard_Init(void)
                   cmd58_response[3],
                   cmd58_response[4]);
           return true;
-
-
-
-
-
 }
+
+
+static bool SDCard_WriteBlock(uint32_t block_number, const uint8_t *data)
+{
+
+    uint8_t cmd24_response = SD_SendCommand(24, block_number, 0x01);
+    uint8_t dummy = 0xFF;
+           uint8_t dummy_rx = 0xFF;
+           uint8_t data_token = 0xFE;
+
+    if (cmd24_response == 0x00)
+    {
+
+
+
+        HAL_SPI_Transmit(&hspi2, &dummy, 1, HAL_MAX_DELAY);
+        HAL_SPI_Transmit(&hspi2, &data_token, 1, HAL_MAX_DELAY);
+
+        HAL_SPI_Transmit(&hspi2, data, 512, HAL_MAX_DELAY);
+
+        uint8_t crc[2] = {0xFF, 0xFF};
+
+        HAL_SPI_Transmit(&hspi2, crc, 2, HAL_MAX_DELAY);
+
+        uint8_t response = 0xFF;
+
+        HAL_SPI_TransmitReceive(&hspi2, &dummy, &response, 1, HAL_MAX_DELAY);
+
+        if ((response & 0x1F) != 0x05)
+        {
+            SD_Deselect();
+            HAL_SPI_TransmitReceive(&hspi2, &dummy, &dummy_rx, 1, HAL_MAX_DELAY);
+            return false;
+        }
+
+        uint32_t start = HAL_GetTick();
+
+        while ((HAL_GetTick() - start) < 1000)
+        {
+            HAL_SPI_TransmitReceive(&hspi2, &dummy, &response, 1, HAL_MAX_DELAY);
+
+            if (response == 0xFF)
+            {
+                SD_Deselect();
+                HAL_SPI_TransmitReceive(&hspi2, &dummy, &dummy_rx, 1, HAL_MAX_DELAY);
+                return true;
+            }
+
+        }
+        SD_Deselect();
+        HAL_SPI_TransmitReceive(&hspi2, &dummy, &dummy_rx, 1, HAL_MAX_DELAY);
+    }
+    SD_Deselect();
+    HAL_SPI_TransmitReceive(&hspi2, &dummy, &dummy_rx, 1, HAL_MAX_DELAY);
+    return false;
+}
+
+
+static bool SDCard_ReadBlock(uint32_t block_number, uint8_t *data)
+{
+    uint8_t cmd17_response = SD_SendCommand(17, block_number, 0x01);
+
+    uint8_t dummy = 0xFF;
+            uint8_t dummy_rx = 0xFF;
+            uint8_t data_token = 0xFE;
+            uint8_t response = 0xFF;
+
+    if (cmd17_response == 0x00)
+    {
+
+
+        bool data_incoming = false;
+
+        uint32_t start = HAL_GetTick();
+
+        while ((HAL_GetTick() - start) < 1000)
+        {
+
+            HAL_SPI_TransmitReceive(&hspi2, &dummy, &response, 1, HAL_MAX_DELAY);
+
+            if (response == data_token)
+            {
+                data_incoming = true;
+                break;
+            }
+        }
+
+        if (data_incoming == true)
+        {
+            uint8_t dummy_tx[512];
+            memset(dummy_tx, 0xFF, sizeof(dummy_tx));
+
+            HAL_SPI_TransmitReceive(&hspi2, dummy_tx, data, 512, HAL_MAX_DELAY);
+
+            HAL_SPI_TransmitReceive(&hspi2, &dummy, &dummy_rx, 1, HAL_MAX_DELAY);
+            HAL_SPI_TransmitReceive(&hspi2, &dummy, &dummy_rx, 1, HAL_MAX_DELAY);
+
+            SD_Deselect();
+            HAL_SPI_TransmitReceive(&hspi2, &dummy, &dummy_rx, 1, HAL_MAX_DELAY);
+
+            return true;
+
+        }
+
+        SD_Deselect();
+        HAL_SPI_TransmitReceive(&hspi2, &dummy, &dummy_rx, 1, HAL_MAX_DELAY);
+        return false;
+    }
+    SD_Deselect();
+    HAL_SPI_TransmitReceive(&hspi2, &dummy, &dummy_rx, 1, HAL_MAX_DELAY);
+    return false;
+}
+
+bool SDCard_TestBlockIO(void)
+{
+    SD_CreateTestBuffer();
+
+    if (!SDCard_WriteBlock(10000, test_block))
+    {
+        return false;
+    }
+
+    if (!SDCard_ReadBlock(10000, readback_block))
+    {
+        return false;
+    }
+
+    for (int i = 0; i < 512; i++)
+    {
+        if (test_block[i] != readback_block[i])
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+
 
 

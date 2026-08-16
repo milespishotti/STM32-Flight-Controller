@@ -273,6 +273,9 @@ int main(void)
 
      SDCard_Init();
 
+     printf("SD block test: %s\r\n",
+                SDCard_TestBlockIO() ? "PASS" : "FAIL");
+
 
   /* USER CODE END 2 */
 
