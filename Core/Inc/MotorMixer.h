@@ -24,6 +24,14 @@
  * M4 = lower left motor = Right Male In line with D12 / PA11
  *
  *
+ *I messed up orientation
+ *
+ * m1 = upper right
+ * m2 = upper left
+ * m3 = lower right
+ * m4 = lower left
+ *
+ *
  *
  *
  *

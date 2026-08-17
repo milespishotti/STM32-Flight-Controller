@@ -14,6 +14,15 @@
 #include "main.h"
 #include "debug.h"
 
+/* SD Card Breakout Pins
+ *
+ * CS = PC1 / A4
+ * SCK = PB13 / right male header in line with D4
+ * MISO = PC2 / left male header next to PC1
+ * MOSI = PC3 / left male header next to PC0
+ *
+ */
+
 
 extern SPI_HandleTypeDef hspi2;
 

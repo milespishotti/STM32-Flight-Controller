@@ -13,7 +13,7 @@
 #include <string.h>
 
 
-#define LOG_BUFFER_SIZE 600
+#define LOG_BUFFER_SIZE 1000
 
 static FlightData log_buffer[LOG_BUFFER_SIZE];
 static uint16_t log_index = 0;
@@ -53,15 +53,43 @@ void Logger_ProcessData(void)
     FIL file;
     FRESULT res;
     UINT bytes_written;
+    FILINFO fno;
 
     res = f_mount(&fs, "0:", 1);
+
+    printf("mount res = %d\r\n", res);
 
     if (res!=FR_OK)
     {
         return;
     }
 
-    res = f_open(&file, "0:/TESTLOG.CSV", FA_CREATE_ALWAYS | FA_WRITE);
+    char filename[20];
+
+    for (uint16_t i = 0; i < 1000; i++)
+    {
+        snprintf(filename, sizeof(filename),
+                           "0:/LOG%03u.CSV", i);
+
+        res = f_stat(filename, &fno);
+
+        if (res == FR_NO_FILE)
+        {
+            break;
+        }
+    }
+
+    if (res != FR_NO_FILE)
+    {
+        f_mount(NULL, "0:", 1);
+        return;
+    }
+
+    printf("filename = %s, stat res = %d\r\n", filename, res);
+
+    res = f_open(&file, filename, FA_CREATE_NEW | FA_WRITE);
+
+    printf("open res = %d\r\n", res);
 
     if (res != FR_OK)
     {

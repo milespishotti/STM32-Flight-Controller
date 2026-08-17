@@ -81,7 +81,12 @@ bool SDCard_Init(void)
           SD_Deselect();
           HAL_SPI_TransmitReceive(&hspi2, &dummy, &rx, 1, HAL_MAX_DELAY);
 
-          printf("CMD0 response: 0x%02X\r\n", cmd0_response);
+          if (cmd0_response != 0x01)
+          {
+              return false;
+          }
+
+//          printf("CMD0 response: 0x%02X\r\n", cmd0_response);
 
 
           uint8_t cmd8_response[5] = {0};
@@ -100,13 +105,20 @@ bool SDCard_Init(void)
           SD_Deselect();
           HAL_SPI_TransmitReceive(&hspi2, &dummy, &rx, 1, HAL_MAX_DELAY);
 
+          if ((cmd8_response[0] != 0x01) ||
+              (cmd8_response[3] != 0x01) ||
+              (cmd8_response[4] != 0xAA))
+          {
+              return false;
+          }
 
-          printf("CMD8: %02X %02X %02X %02X %02X\r\n",
-                 cmd8_response[0],
-                 cmd8_response[1],
-                 cmd8_response[2],
-                 cmd8_response[3],
-                 cmd8_response[4]);
+
+//          printf("CMD8: %02X %02X %02X %02X %02X\r\n",
+//                 cmd8_response[0],
+//                 cmd8_response[1],
+//                 cmd8_response[2],
+//                 cmd8_response[3],
+//                 cmd8_response[4]);
 
 
           bool amcd41_success = false;
@@ -125,6 +137,11 @@ bool SDCard_Init(void)
               SD_Deselect();
               HAL_SPI_TransmitReceive(&hspi2, &dummy, &rx, 1, HAL_MAX_DELAY);
 
+              if (cmd55_response != 0x01)
+              {
+                  return false;
+              }
+
               acmd41_response = SD_SendCommand(41, 0x40000000, 0x01);
 
               SD_Deselect();
@@ -140,9 +157,16 @@ bool SDCard_Init(void)
 
           }
 
-          printf("CMD55 response: 0x%02X\r\n", cmd55_response);
-          printf("ACMD41 response: 0x%02X\r\n", acmd41_response);
-          printf("ACMD41 success: %s\r\n", amcd41_success ? "YES" : "NO");
+
+
+          if (!amcd41_success)
+          {
+              return false;
+          }
+
+//          printf("CMD55 response: 0x%02X\r\n", cmd55_response);
+//          printf("ACMD41 response: 0x%02X\r\n", acmd41_response);
+//          printf("ACMD41 success: %s\r\n", amcd41_success ? "YES" : "NO");
 
 
           uint8_t cmd58_response[5] = {0};
@@ -162,15 +186,20 @@ bool SDCard_Init(void)
           SD_Deselect();
           HAL_SPI_TransmitReceive(&hspi2, &dummy, &rx, 1, HAL_MAX_DELAY);
 
-          bool high_capacity = (cmd58_response[1] & 0x40) != 0;
+//          bool high_capacity = (cmd58_response[1] & 0x40) != 0;
 
-          printf("High capacity: %s\r\n", high_capacity ? "YES" : "NO");
-          printf("CMD58: %02X %02X %02X %02X %02X\r\n",
-                  cmd58_response[0],
-                  cmd58_response[1],
-                  cmd58_response[2],
-                  cmd58_response[3],
-                  cmd58_response[4]);
+//          printf("High capacity: %s\r\n", high_capacity ? "YES" : "NO");
+//          printf("CMD58: %02X %02X %02X %02X %02X\r\n",
+//                  cmd58_response[0],
+//                  cmd58_response[1],
+//                  cmd58_response[2],
+//                  cmd58_response[3],
+//                  cmd58_response[4]);
+          if (cmd58_response[0] != 0x00)
+          {
+              return false;
+          }
+
           return true;
 }
 

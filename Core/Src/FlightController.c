@@ -20,7 +20,7 @@ static FlightController_Output output;
 void FlightController_Init(void)
 {
     roll_pid = (PID_Controller) {
-            .kp = 1.0f,
+            .kp = 2.0f,
             .ki = 0.0f,
             .kd = 0.0f,
             .previous_error = 0.0f,
@@ -28,7 +28,7 @@ void FlightController_Init(void)
     };
 
     pitch_pid = (PID_Controller) {
-                .kp = 1.0f,
+                .kp = 3.5f,
                 .ki = 0.0f,
                 .kd = 0.0f,
                 .previous_error = 0.0f,
@@ -36,7 +36,7 @@ void FlightController_Init(void)
     };
 
     yaw_rate_pid = (PID_Controller) {
-                .kp = 1.0f,
+                .kp = 0.0f,
                 .ki = 0.0f,
                 .kd = 0.0f,
                 .previous_error = 0.0f,

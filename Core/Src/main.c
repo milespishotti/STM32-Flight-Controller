@@ -168,153 +168,116 @@ int main(void)
 
 
   /* Real Init Sequence */
-//  uint32_t reset_flags = RCC->CSR;
+  uint32_t reset_flags = RCC->CSR;
+
+  printf("\r\n========== NEW BOOT ==========\r\n");
+  printf("Reset flags: 0x%08lX\r\n", reset_flags);
+
+  __HAL_RCC_CLEAR_RESET_FLAGS();
+
+  static uint32_t boot_count = 0;
+  boot_count++;
+
+  printf("MAIN START %lu\r\n", boot_count);
+
+
+  printf("Flight controller booted!\r\n");
+
+  DShot_Init();
+
+
+
+
+  while (!MPU6050_Init())
+  {
+      printf("MPU6050 initialization failed\r\n");
+
+      HAL_StatusTypeDef status =
+          HAL_I2C_IsDeviceReady(&hi2c1, 0x68 << 1, 3, 10);
+
+      printf("Ready status: %d | HAL error: 0x%08lX\r\n",
+             status,
+             HAL_I2C_GetError(&hi2c1));
+
+     bool recovered = I2CRecovery();
+
+     printf("recovered = %s\r\n", recovered ? "SUCCESSS" : "FAILED");
+
+     MX_I2C1_Init();
+
+      HAL_Delay(500);
+  }
+
+  printf("MPU6050 initialized\r\n");
+
+  printf("Keep MPU6050 still. Calibrating...\r\n");
+  Calibrate_MPU6050();
+
+  printf("Gyro offsets: %.3f, %.3f, %.3f\r\n",
+         GxOffset,
+         GyOffset,
+         GzOffset);
+
+  Mahony_Init();
+  Mahony_SetGains(3.15f, 0.0f);
 //
-//  printf("\r\n========== NEW BOOT ==========\r\n");
-//  printf("Reset flags: 0x%08lX\r\n", reset_flags);
+  FlightController_Init();
+
+  CRSF_Init();
+
+  Safety_Init();
 //
-//  __HAL_RCC_CLEAR_RESET_FLAGS();
+  /*
+   * Establish an initial attitude before starting the control timer.
+   */
+  for (uint16_t i = 0; i < 200; i++)
+  {
+      MPU6050_Read();
+
+      float correctedGx = Gx - GxOffset;
+      float correctedGy = Gy - GyOffset;
+      float correctedGz = Gz - GzOffset;
+
+      Mahony_UpdateIMU(
+              correctedGx,
+              correctedGy,
+              correctedGz,
+              Ax,
+              Ay,
+              Az,
+              0.01f);
+
+      HAL_Delay(10);
+  }
+
+  Mahony_GetEuler(&roll, &pitch, &yaw);
+
+  rollOffset = roll;
+  pitchOffset = pitch;
+
+  printf("Level offsets: Roll %.2f, Pitch %.2f\r\n",
+         rollOffset,
+         pitchOffset);
+
+  printf("Calibration complete\r\n");
 //
-//  static uint32_t boot_count = 0;
-//  boot_count++;
 //
-//  printf("MAIN START %lu\r\n", boot_count);
+  Logger_Reset();
 //
+  if (HAL_TIM_Base_Start_IT(&htim2) != HAL_OK)
+  {
+      Error_Handler();
+  }
 //
-//  printf("Flight controller booted!\r\n");
-//
-//  DShot_Init();
-//
-//
-//
-//
-//  while (!MPU6050_Init())
-//  {
-//      printf("MPU6050 initialization failed\r\n");
-//
-//      HAL_StatusTypeDef status =
-//          HAL_I2C_IsDeviceReady(&hi2c1, 0x68 << 1, 3, 10);
-//
-//      printf("Ready status: %d | HAL error: 0x%08lX\r\n",
-//             status,
-//             HAL_I2C_GetError(&hi2c1));
-//
-//     bool recovered = I2CRecovery();
-//
-//     printf("recovered = %s\r\n", recovered ? "SUCCESSS" : "FAILED");
-//
-//     MX_I2C1_Init();
-//
-//      HAL_Delay(500);
-//  }
-//
-//  printf("MPU6050 initialized\r\n");
-//
-//  printf("Keep MPU6050 still. Calibrating...\r\n");
-//  Calibrate_MPU6050();
-//
-//  printf("Gyro offsets: %.3f, %.3f, %.3f\r\n",
-//         GxOffset,
-//         GyOffset,
-//         GzOffset);
-//
-//  Mahony_Init();
-//  Mahony_SetGains(3.15f, 0.0f);
-////
-//  FlightController_Init();
-//
-//  CRSF_Init();
-//
-//  Safety_Init();
-////
-//  /*
-//   * Establish an initial attitude before starting the control timer.
-//   */
-//  for (uint16_t i = 0; i < 200; i++)
-//  {
-//      MPU6050_Read();
-//
-//      float correctedGx = Gx - GxOffset;
-//      float correctedGy = Gy - GyOffset;
-//      float correctedGz = Gz - GzOffset;
-//
-//      Mahony_UpdateIMU(
-//              correctedGx,
-//              correctedGy,
-//              correctedGz,
-//              Ax,
-//              Ay,
-//              Az,
-//              0.01f);
-//
-//      HAL_Delay(10);
-//  }
-//
-//  Mahony_GetEuler(&roll, &pitch, &yaw);
-//
-//  rollOffset = roll;
-//  pitchOffset = pitch;
-//
-//  printf("Level offsets: Roll %.2f, Pitch %.2f\r\n",
-//         rollOffset,
-//         pitchOffset);
-//
-//  printf("Calibration complete\r\n");
-////
-////
-//  Logger_Reset();
-////
-//  if (HAL_TIM_Base_Start_IT(&htim2) != HAL_OK)
-//  {
-//      Error_Handler();
-//  }
-////
-//  FlightData flight_data;
+  FlightData flight_data;
+
+  bool was_armed = false;
+  bool current_armed = false;
+
+  bool log_flush_requested = false;
 
   /* End of Real Init Sequence */
 
-  printf("starting csv test\r\n");
-
-  Logger_Reset();
-
-  for (int i = 0; i < 5; i++)
-  {
-      FlightData test = {
-          .roll_measured = 1.0f + i,
-          .pitch_measured = -2.0f - i,
-          .yaw_rate_measured = 3.0f + i,
-
-          .roll_setpoint = 4.0f,
-          .pitch_setpoint = 5.0f,
-          .yaw_rate_setpoint = 6.0f,
-
-          .roll_correction = 7.0f,
-          .pitch_correction = 8.0f,
-          .yaw_rate_correction = 9.0f,
-
-          .throttle = 100 + i,
-
-          .motor1 = 200 + i,
-          .motor2 = 300 + i,
-          .motor3 = 400 + i,
-          .motor4 = 500 + i,
-
-          .valid_frame_count = 1000 + i,
-
-          .receiver_valid = true,
-          .sensor_valid = true,
-          .arm_requested = true,
-          .armed = true,
-
-          .timestamp_ms = 1000 + (i * 10)
-      };
-
-      Logger_ReceiveData(&test);
-  }
-
-  Logger_ProcessData();
-
-  printf("end of csv test\r\n");
 
 
 
@@ -331,48 +294,58 @@ int main(void)
 
       /* Real Control Loop */
 
-//      if (ControlLoopFlag)
-//      {
-//          ControlLoopFlag = 0;
-//
+      if (ControlLoopFlag)
+      {
+          ControlLoopFlag = 0;
+
 //          HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10, GPIO_PIN_SET);
 //
 //          Safety_Input safety;
 //
-//          bool imu_valid = MPU6050_Read();
-//
-//          float correctedGx = 0.0f;
-//          float correctedGy = 0.0f;
-//          float correctedGz = 0.0f;
-//
-//          float roll = 0.0f;
-//          float pitch = 0.0f;
-//          float yaw = 0.0f;
-//
-//          if (imu_valid == true)
-//          {
-//
-//              correctedGx = Gx - GxOffset;
-//              correctedGy = Gy - GyOffset;
-//              correctedGz = Gz - GzOffset;
-//
-//              Mahony_UpdateIMU(
-//                      correctedGx,
-//                      correctedGy,
-//                      correctedGz,
-//                      Ax,
-//                      Ay,
-//                      Az,
-//                      0.01f);
-//
-//
-//
-//              Mahony_GetEuler(&roll, &pitch, &yaw);
-//
-//              roll -= rollOffset;
-//              pitch -= pitchOffset;
-//          }
-//
+          bool imu_valid = MPU6050_Read();
+
+          float correctedGx = 0.0f;
+          float correctedGy = 0.0f;
+          float correctedGz = 0.0f;
+
+          float roll = 0.0f;
+          float pitch = 0.0f;
+          float yaw = 0.0f;
+
+          if (imu_valid == true)
+          {
+
+              correctedGx = Gx - GxOffset;
+              correctedGy = Gy - GyOffset;
+              correctedGz = Gz - GzOffset;
+
+              Mahony_UpdateIMU(
+                      correctedGx,
+                      correctedGy,
+                      correctedGz,
+                      Ax,
+                      Ay,
+                      Az,
+                      0.01f);
+
+
+
+              Mahony_GetEuler(&roll, &pitch, &yaw);
+
+              roll -= rollOffset;
+              pitch -= pitchOffset;
+          }
+
+          printf("IMU:%d | Roll:%7.2f | Pitch:%7.2f | Yaw:%7.2f | "
+                 "Gx:%7.2f | Gy:%7.2f | Gz:%7.2f\r\n",
+                 imu_valid,
+                 roll,
+                 pitch,
+                 yaw,
+                 correctedGx,
+                 correctedGy,
+                 correctedGz);
+
 //          const uint16_t *channels = CRSF_GetChannels();
 //
 //          valid_frame_count = CRSF_GetValidFrameCount();
@@ -460,16 +433,33 @@ int main(void)
 //
 //          Logger_ReceiveData(&flight_data);
 //
+//          current_armed = flight_data.armed;
+//
+//          if ((current_armed == false) && (was_armed == true))
+//          {
+//              log_flush_requested = true;
+//              printf("DISARM EDGE DETECTED\r\n");
+//          }
+//
+//          was_armed = current_armed;
+//
+//
+//
+//
 //          HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10, GPIO_PIN_RESET);
+//      }
 //
 //
-//
-//  }
-//
-//   Logger_ProcessData();
+//      if (log_flush_requested == true)
+//      {
+//          printf("PROCESSING LOG\r\n");
+//          Logger_ProcessData();
+//          log_flush_requested = false;
+      }
+
+
 
    /* End of Real Control Loop */
-
 
 
 
