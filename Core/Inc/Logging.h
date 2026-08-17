@@ -8,6 +8,8 @@
 #ifndef INC_LOGGING_H_
 #define INC_LOGGING_H_
 
+#include "fatfs.h"
+
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -39,6 +41,8 @@ typedef struct
     bool sensor_valid;
     bool arm_requested;
     bool armed;
+
+    uint32_t timestamp_ms;
 
 
 } FlightData;

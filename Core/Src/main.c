@@ -270,56 +270,52 @@ int main(void)
 //  }
 ////
 //  FlightData flight_data;
-//
+
   /* End of Real Init Sequence */
 
+  printf("starting csv test\r\n");
 
-  HAL_Delay(2000);
+  Logger_Reset();
 
-  printf("========NEW BOOT========\r\n");
-
-
-  FATFS fs;
-  FIL file;
-  FRESULT res;
-  UINT bytes_written;
-
-  res = f_mount(&fs, "0:", 1);
-
-  if (res == FR_OK)
+  for (int i = 0; i < 5; i++)
   {
-      printf("FatFS mount: PASS\r\n");
+      FlightData test = {
+          .roll_measured = 1.0f + i,
+          .pitch_measured = -2.0f - i,
+          .yaw_rate_measured = 3.0f + i,
 
-      res = f_open(&file, "0:/TEST.TXT", FA_CREATE_ALWAYS | FA_WRITE);
+          .roll_setpoint = 4.0f,
+          .pitch_setpoint = 5.0f,
+          .yaw_rate_setpoint = 6.0f,
 
-      if (res == FR_OK)
-      {
-          printf("File open: PASS\r\n");
+          .roll_correction = 7.0f,
+          .pitch_correction = 8.0f,
+          .yaw_rate_correction = 9.0f,
 
-          char message[] = "STM32 SD FatFS test\r\n";
+          .throttle = 100 + i,
 
-          res = f_write(&file,
-                        message,
-                        strlen(message),
-                        &bytes_written);
+          .motor1 = 200 + i,
+          .motor2 = 300 + i,
+          .motor3 = 400 + i,
+          .motor4 = 500 + i,
 
-          printf("f_write result: %d, bytes: %u\r\n",
-                 res,
-                 bytes_written);
+          .valid_frame_count = 1000 + i,
 
-          f_close(&file);
-      }
-      else
-      {
-          printf("File open failed: %d\r\n", res);
-      }
-  }
-  else
-  {
-      printf("FatFS mount failed: %d\r\n", res);
+          .receiver_valid = true,
+          .sensor_valid = true,
+          .arm_requested = true,
+          .armed = true,
+
+          .timestamp_ms = 1000 + (i * 10)
+      };
+
+      Logger_ReceiveData(&test);
   }
 
-  f_mount(NULL, "0:", 1);
+  Logger_ProcessData();
+
+  printf("end of csv test\r\n");
+
 
 
   /* USER CODE END 2 */
@@ -455,7 +451,10 @@ int main(void)
 //              .receiver_valid = safety.receiver_valid,
 //              .sensor_valid = safety.sensor_valid,
 //              .arm_requested = safety.arm_requested,
-//              .armed = Safety_IsArmed()
+//              .armed = Safety_IsArmed(),
+//
+//              .timestamp_ms = HAL_GetTick()
+//
 //
 //          };
 //

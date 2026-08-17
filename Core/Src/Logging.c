@@ -10,96 +10,139 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
-static FlightData data_storage;
 
-static bool data_available = false;
+#define LOG_BUFFER_SIZE 600
 
-static uint8_t snapshot_counter = 0;
+static FlightData log_buffer[LOG_BUFFER_SIZE];
+static uint16_t log_index = 0;
+static bool buffer_full = false;
 
 void Logger_Reset(void)
 {
 
-    data_storage = (FlightData) {
-        .roll_measured = 0.0f,
-        .pitch_measured = 0.0f,
-        .yaw_rate_measured = 0.0f,
-        .roll_setpoint = 0.0f,
-        .pitch_setpoint = 0.0f,
-        .yaw_rate_setpoint = 0.0f,
-        .roll_correction = 0.0f,
-        .pitch_correction = 0.0f,
-        .yaw_rate_correction = 0.0f,
-
-        .throttle = 0,
-        .valid_frame_count = 0,
-
-        .motor1 = 0,
-        .motor2 = 0,
-        .motor3 = 0,
-        .motor4 = 0,
-
-        .receiver_valid = false,
-        .sensor_valid = false,
-        .arm_requested = false,
-        .armed = false
-    };
-
-
-    data_available = false;
-    snapshot_counter = 0;
+   log_index = 0;
+   buffer_full = false;
 }
 
 
 void Logger_ReceiveData(const FlightData *data)
 {
 
-    if (snapshot_counter >= 9)
+    if (log_index < LOG_BUFFER_SIZE)
     {
-
-        data_storage = *data;
-
-        data_available = true;
-        snapshot_counter = 0;
-
+        log_buffer[log_index] = *data;
+        log_index++;
     }
     else
     {
-        snapshot_counter++;
+        buffer_full = true;
     }
 
 }
 
 void Logger_ProcessData(void)
 {
-    if (data_available == false)
+    if (log_index == 0)
     {
         return;
     }
 
-    data_available = false;
+    FATFS fs;
+    FIL file;
+    FRESULT res;
+    UINT bytes_written;
+
+    res = f_mount(&fs, "0:", 1);
+
+    if (res!=FR_OK)
+    {
+        return;
+    }
+
+    res = f_open(&file, "0:/TESTLOG.CSV", FA_CREATE_ALWAYS | FA_WRITE);
+
+    if (res != FR_OK)
+    {
+        f_mount(NULL, "0:", 1);
+        return;
+    }
+
+    const char *header =
+        "timestamp_ms,roll_measured,pitch_measured,yaw_rate_measured,"
+        "roll_setpoint,pitch_setpoint,yaw_rate_setpoint,"
+        "roll_correction,pitch_correction,yaw_rate_correction,"
+        "throttle,motor1,motor2,motor3,motor4,"
+        "valid_frame_count,receiver_valid,sensor_valid,arm_requested,armed\r\n";
+
+    res = f_write(&file, header, strlen(header), &bytes_written);
+
+    if ((res != FR_OK) || (bytes_written != strlen(header)))
+    {
+        f_close(&file);
+        f_mount(NULL, "0:", 1);
+        return;
+    }
+
+    char line[384];
+
+   for (uint16_t i = 0; i < log_index; i++)
+   {
+
+       int len = snprintf(
+           line,
+           sizeof(line),
+           "%lu,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%u,%u,%u,%u,%u,%lu,%u,%u,%u,%u\r\n",
+           (unsigned long)log_buffer[i].timestamp_ms,
+           log_buffer[i].roll_measured,
+           log_buffer[i].pitch_measured,
+           log_buffer[i].yaw_rate_measured,
+           log_buffer[i].roll_setpoint,
+           log_buffer[i].pitch_setpoint,
+           log_buffer[i].yaw_rate_setpoint,
+           log_buffer[i].roll_correction,
+           log_buffer[i].pitch_correction,
+           log_buffer[i].yaw_rate_correction,
+           log_buffer[i].throttle,
+           log_buffer[i].motor1,
+           log_buffer[i].motor2,
+           log_buffer[i].motor3,
+           log_buffer[i].motor4,
+           (unsigned long)log_buffer[i].valid_frame_count,
+           log_buffer[i].receiver_valid,
+           log_buffer[i].sensor_valid,
+           log_buffer[i].arm_requested,
+           log_buffer[i].armed
+       );
+
+       if ((len < 0) || (len >= sizeof(line)))
+       {
+           f_close(&file);
+           f_mount(NULL, "0:", 1);
+           return;
+       }
+       else
+       {
+           res = f_write(&file, line, len, &bytes_written);
+       }
+
+       if ((res != FR_OK) || (bytes_written != len))
+       {
+           f_close(&file);
+           f_mount(NULL, "0:", 1);
+           return;
+       }
+
+   }
 
 
-    printf("Roll: %.2f | Pitch: %.2f | Roll SP: %.2f | Pitch SP: %.2f | Yaw Rate SP: %.2f | Roll Corr: %.2f | Pitch Corr: %.2f | Yaw Corr: %.2f | Throttle: %u | Frames: %lu\r\n",
-           data_storage.roll_measured,
-           data_storage.pitch_measured,
-           data_storage.roll_setpoint,
-           data_storage.pitch_setpoint,
-           data_storage.yaw_rate_setpoint,
-           data_storage.roll_correction,
-           data_storage.pitch_correction,
-           data_storage.yaw_rate_correction,
-           data_storage.throttle,
-           (unsigned long)data_storage.valid_frame_count);
+   f_close(&file);
+   f_mount(NULL, "0:", 1);
 
-    printf("M1:%u M2:%u M3:%u M4:%u\r\n",
-           data_storage.motor1,
-           data_storage.motor2,
-           data_storage.motor3,
-           data_storage.motor4);
+   Logger_Reset();
 
-    printf("Receiver: %i Sensor: %i Arm_Requested: %i Arm: %i\r\n", data_storage.receiver_valid, data_storage.sensor_valid, data_storage.arm_requested, data_storage.armed);
-
+   return;
 }
 
 
