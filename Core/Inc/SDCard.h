@@ -17,6 +17,15 @@
 
 extern SPI_HandleTypeDef hspi2;
 
+bool SDCard_ReadBlock(uint32_t block_number, uint8_t *data);
+
+bool SDCard_WriteBlock(uint32_t block_number, const uint8_t *data);
+
+bool SDCard_GetSectorCount(uint32_t *sector_count);
+
+
+
+
 
 bool SDCard_Init(void);
 

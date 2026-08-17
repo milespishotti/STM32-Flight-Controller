@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "fatfs.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -34,9 +35,12 @@
 #include "I2CRecovery.h"
 #include "SDCard.h"
 
+#include "fatfs.h"
+
 
 #include <stdio.h>
 #include <stdbool.h>
+#include <string.h>
 
 
 /* USER CODE END Includes */
@@ -159,6 +163,7 @@ int main(void)
   MX_TIM1_Init();
   MX_USART6_UART_Init();
   MX_SPI2_Init();
+  MX_FATFS_Init();
   /* USER CODE BEGIN 2 */
 
 
@@ -269,12 +274,52 @@ int main(void)
   /* End of Real Init Sequence */
 
 
-    printf("\r\n========== NEW BOOT ==========\r\n");
+  HAL_Delay(2000);
 
-     SDCard_Init();
+  printf("========NEW BOOT========\r\n");
 
-     printf("SD block test: %s\r\n",
-                SDCard_TestBlockIO() ? "PASS" : "FAIL");
+
+  FATFS fs;
+  FIL file;
+  FRESULT res;
+  UINT bytes_written;
+
+  res = f_mount(&fs, "0:", 1);
+
+  if (res == FR_OK)
+  {
+      printf("FatFS mount: PASS\r\n");
+
+      res = f_open(&file, "0:/TEST.TXT", FA_CREATE_ALWAYS | FA_WRITE);
+
+      if (res == FR_OK)
+      {
+          printf("File open: PASS\r\n");
+
+          char message[] = "STM32 SD FatFS test\r\n";
+
+          res = f_write(&file,
+                        message,
+                        strlen(message),
+                        &bytes_written);
+
+          printf("f_write result: %d, bytes: %u\r\n",
+                 res,
+                 bytes_written);
+
+          f_close(&file);
+      }
+      else
+      {
+          printf("File open failed: %d\r\n", res);
+      }
+  }
+  else
+  {
+      printf("FatFS mount failed: %d\r\n", res);
+  }
+
+  f_mount(NULL, "0:", 1);
 
 
   /* USER CODE END 2 */
@@ -797,10 +842,13 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, SD_CS_Pin|GPIO_PIN_10, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(SD_CS_GPIO_Port, SD_CS_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : B1_Pin */
   GPIO_InitStruct.Pin = B1_Pin;

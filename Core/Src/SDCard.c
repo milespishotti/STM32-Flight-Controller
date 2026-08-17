@@ -175,7 +175,7 @@ bool SDCard_Init(void)
 }
 
 
-static bool SDCard_WriteBlock(uint32_t block_number, const uint8_t *data)
+bool SDCard_WriteBlock(uint32_t block_number, const uint8_t *data)
 {
 
     uint8_t cmd24_response = SD_SendCommand(24, block_number, 0x01);
@@ -231,7 +231,7 @@ static bool SDCard_WriteBlock(uint32_t block_number, const uint8_t *data)
 }
 
 
-static bool SDCard_ReadBlock(uint32_t block_number, uint8_t *data)
+bool SDCard_ReadBlock(uint32_t block_number, uint8_t *data)
 {
     uint8_t cmd17_response = SD_SendCommand(17, block_number, 0x01);
 
@@ -312,5 +312,86 @@ bool SDCard_TestBlockIO(void)
 }
 
 
+static bool SD_ReadCSD(uint8_t csd[16])
+{
+    uint8_t cmd9_response = SD_SendCommand(9, 0x00000000, 0x01);
 
+    uint8_t dummy = 0xFF;
+    uint8_t dummy_rx = 0xFF;
+    uint8_t data_token = 0xFE;
+    uint8_t response = 0xFF;
+
+    if (cmd9_response == 0x00)
+    {
+
+        bool data_incoming = false;
+
+        uint32_t start = HAL_GetTick();
+
+        while ((HAL_GetTick() - start) < 1000)
+        {
+
+            HAL_SPI_TransmitReceive(&hspi2, &dummy, &response, 1, HAL_MAX_DELAY);
+
+            if (response == data_token)
+            {
+                data_incoming = true;
+                break;
+            }
+        }
+
+        if (data_incoming == true)
+        {
+            for (int i = 0; i < 16; i++)
+            {
+
+                HAL_SPI_TransmitReceive(&hspi2, &dummy, &csd[i], 1, HAL_MAX_DELAY);
+            }
+
+            HAL_SPI_TransmitReceive(&hspi2, &dummy, &dummy_rx, 1, HAL_MAX_DELAY);
+            HAL_SPI_TransmitReceive(&hspi2, &dummy, &dummy_rx, 1, HAL_MAX_DELAY);
+
+            SD_Deselect();
+            HAL_SPI_TransmitReceive(&hspi2, &dummy, &dummy_rx, 1, HAL_MAX_DELAY);
+
+            return true;
+        }
+
+        SD_Deselect();
+        HAL_SPI_TransmitReceive(&hspi2, &dummy, &dummy_rx, 1, HAL_MAX_DELAY);
+
+        return false;
+
+    }
+
+    SD_Deselect();
+    HAL_SPI_TransmitReceive(&hspi2, &dummy, &dummy_rx, 1, HAL_MAX_DELAY);
+
+    return false;
+}
+
+bool SDCard_GetSectorCount(uint32_t *sector_count)
+{
+    uint8_t csd[16];
+
+    if (!SD_ReadCSD(csd))
+    {
+        return false;
+    }
+
+    // Verify CSD version 2.0
+    if ((csd[0] & 0xC0) != 0x40)
+    {
+        return false;
+    }
+
+    uint32_t c_size =
+        ((uint32_t)(csd[7] & 0x3F) << 16) |
+        ((uint32_t)csd[8] << 8) |
+        csd[9];
+
+    *sector_count = (c_size + 1) * 1024;
+
+    return true;
+}
 
