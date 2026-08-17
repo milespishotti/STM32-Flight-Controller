@@ -274,6 +274,8 @@ int main(void)
   bool was_armed = false;
   bool current_armed = false;
 
+  uint16_t current_throttle = 0;
+
   bool log_flush_requested = false;
 
   /* End of Real Init Sequence */
@@ -298,10 +300,10 @@ int main(void)
       {
           ControlLoopFlag = 0;
 
-//          HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10, GPIO_PIN_SET);
-//
-//          Safety_Input safety;
-//
+          HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10, GPIO_PIN_SET);
+
+          Safety_Input safety;
+
           bool imu_valid = MPU6050_Read();
 
           float correctedGx = 0.0f;
@@ -336,125 +338,121 @@ int main(void)
               pitch -= pitchOffset;
           }
 
-          printf("IMU:%d | Roll:%7.2f | Pitch:%7.2f | Yaw:%7.2f | "
-                 "Gx:%7.2f | Gy:%7.2f | Gz:%7.2f\r\n",
-                 imu_valid,
-                 roll,
-                 pitch,
-                 yaw,
-                 correctedGx,
-                 correctedGy,
-                 correctedGz);
 
-//          const uint16_t *channels = CRSF_GetChannels();
-//
-//          valid_frame_count = CRSF_GetValidFrameCount();
-//
-//          RCInput_Update(channels);
-//
-//          const RC_Setpoints *setpoints =
-//                  RCInput_GetSetpoints();
-//
-//          safety.arm_requested = setpoints->arm_requested;
-//          safety.receiver_valid = CRSF_IsReceiverValid();
-//          safety.throttle = setpoints->throttle;
-//          safety.sensor_valid = imu_valid;
-//
-//          Safety_Update(&safety);
-//
-//          FlightController_Input controller_input = {
-//                  .roll_setpoint = setpoints->roll_setpoint,
-//                  .pitch_setpoint = setpoints->pitch_setpoint,
-//                  .yaw_rate_setpoint = setpoints->yaw_rate_setpoint,
-//
-//                  .roll_measured = roll,
-//                  .pitch_measured = pitch,
-//                  .yaw_rate_measured = correctedGz,
-//
-//                  .dt = 0.01f
-//          };
-//
-//
-//         FlightController_Update(&controller_input);
-//
-//         const FlightController_Output *controller_output =
-//                 FlightController_GetOutput();
-//
-//         MotorOutputs motor_output = MotorMixer_Mix(
-//                 (int16_t)controller_output->roll_correction,
-//                 (int16_t)controller_output->pitch_correction,
-//                 (int16_t)controller_output->yaw_rate_correction,
-//                 setpoints->throttle);
-//
-//          if (Safety_IsArmed())
-//          {
-//              DShot_Send(
-//                      motor_output.m1,
-//                      motor_output.m2,
-//                      motor_output.m3,
-//                      motor_output.m4);
-//          }
-//          else
-//          {
-//              FlightController_Reset();
-//              DShot_Send(0, 0, 0, 0);
-//          }
-//
-//
-//          flight_data = (FlightData) {
-//              .roll_measured = roll,
-//              .pitch_measured = pitch,
-//              .yaw_rate_measured = correctedGz,
-//              .roll_setpoint = setpoints->roll_setpoint,
-//              .pitch_setpoint = setpoints->pitch_setpoint,
-//              .yaw_rate_setpoint = setpoints->yaw_rate_setpoint,
-//              .roll_correction = controller_output->roll_correction,
-//              .pitch_correction = controller_output->pitch_correction,
-//              .yaw_rate_correction = controller_output->yaw_rate_correction,
-//
-//              .throttle = setpoints->throttle,
-//
-//              .motor1 = motor_output.m1,
-//              .motor2 = motor_output.m2,
-//              .motor3 = motor_output.m3,
-//              .motor4 = motor_output.m4,
-//
-//              .valid_frame_count = CRSF_GetValidFrameCount(),
-//
-//              .receiver_valid = safety.receiver_valid,
-//              .sensor_valid = safety.sensor_valid,
-//              .arm_requested = safety.arm_requested,
-//              .armed = Safety_IsArmed(),
-//
-//              .timestamp_ms = HAL_GetTick()
-//
-//
-//          };
-//
-//          Logger_ReceiveData(&flight_data);
-//
-//          current_armed = flight_data.armed;
-//
-//          if ((current_armed == false) && (was_armed == true))
-//          {
-//              log_flush_requested = true;
-//              printf("DISARM EDGE DETECTED\r\n");
-//          }
-//
-//          was_armed = current_armed;
-//
-//
-//
-//
-//          HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10, GPIO_PIN_RESET);
-//      }
-//
-//
-//      if (log_flush_requested == true)
-//      {
-//          printf("PROCESSING LOG\r\n");
-//          Logger_ProcessData();
-//          log_flush_requested = false;
+
+          const uint16_t *channels = CRSF_GetChannels();
+
+          valid_frame_count = CRSF_GetValidFrameCount();
+
+          RCInput_Update(channels);
+
+          const RC_Setpoints *setpoints =
+                  RCInput_GetSetpoints();
+
+          safety.arm_requested = setpoints->arm_requested;
+          safety.receiver_valid = CRSF_IsReceiverValid();
+          safety.throttle = setpoints->throttle;
+          safety.sensor_valid = imu_valid;
+
+          Safety_Update(&safety);
+
+          FlightController_Input controller_input = {
+                  .roll_setpoint = setpoints->roll_setpoint,
+                  .pitch_setpoint = setpoints->pitch_setpoint,
+                  .yaw_rate_setpoint = setpoints->yaw_rate_setpoint,
+
+                  .roll_measured = roll,
+                  .pitch_measured = pitch,
+                  .yaw_rate_measured = correctedGz,
+
+                  .dt = 0.01f
+          };
+
+
+         FlightController_Update(&controller_input);
+
+         const FlightController_Output *controller_output =
+                 FlightController_GetOutput();
+
+         MotorOutputs motor_output = MotorMixer_Mix(
+                 (int16_t)controller_output->roll_correction,
+                 (int16_t)controller_output->pitch_correction,
+                 (int16_t)controller_output->yaw_rate_correction,
+                 setpoints->throttle);
+
+          if (Safety_IsArmed())
+          {
+              DShot_Send(
+                      motor_output.m1,
+                      motor_output.m2,
+                      motor_output.m3,
+                      motor_output.m4);
+          }
+          else
+          {
+              FlightController_Reset();
+              DShot_Send(0, 0, 0, 0);
+          }
+
+
+          flight_data = (FlightData) {
+              .roll_measured = roll,
+              .pitch_measured = pitch,
+              .yaw_rate_measured = correctedGz,
+              .roll_setpoint = setpoints->roll_setpoint,
+              .pitch_setpoint = setpoints->pitch_setpoint,
+              .yaw_rate_setpoint = setpoints->yaw_rate_setpoint,
+              .roll_correction = controller_output->roll_correction,
+              .pitch_correction = controller_output->pitch_correction,
+              .yaw_rate_correction = controller_output->yaw_rate_correction,
+
+              .throttle = setpoints->throttle,
+
+              .motor1 = motor_output.m1,
+              .motor2 = motor_output.m2,
+              .motor3 = motor_output.m3,
+              .motor4 = motor_output.m4,
+
+              .valid_frame_count = CRSF_GetValidFrameCount(),
+
+              .receiver_valid = safety.receiver_valid,
+              .sensor_valid = safety.sensor_valid,
+              .arm_requested = safety.arm_requested,
+              .armed = Safety_IsArmed(),
+
+              .timestamp_ms = HAL_GetTick()
+
+
+          };
+
+          current_armed = flight_data.armed;
+          current_throttle = flight_data.throttle;
+
+          if ((current_armed == true) && (current_throttle >= 650))
+          {
+              Logger_ReceiveData(&flight_data);
+          }
+
+          if ((current_armed == false) && (was_armed == true))
+          {
+              log_flush_requested = true;
+              printf("DISARM EDGE DETECTED\r\n");
+          }
+
+          was_armed = current_armed;
+
+
+
+
+          HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10, GPIO_PIN_RESET);
+      }
+
+
+      if (log_flush_requested == true)
+      {
+          printf("PROCESSING LOG\r\n");
+          Logger_ProcessData();
+          log_flush_requested = false;
       }
 
 
