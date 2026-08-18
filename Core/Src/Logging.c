@@ -100,7 +100,9 @@ void Logger_ProcessData(void)
     const char *header =
         "timestamp_ms,roll_measured,pitch_measured,yaw_rate_measured,"
         "roll_setpoint,pitch_setpoint,yaw_rate_setpoint,"
-        "roll_correction,pitch_correction,yaw_rate_correction,"
+        "roll_correction,roll_p_term,roll_i_term,roll_d_term,"
+        "pitch_correction,pitch_p_term,pitch_i_term,pitch_d_term,"
+        "yaw_rate_correction,yaw_p_term,yaw_i_term,yaw_d_term,"
         "throttle,motor1,motor2,motor3,motor4,"
         "valid_frame_count,receiver_valid,sensor_valid,arm_requested,armed\r\n";
 
@@ -113,7 +115,7 @@ void Logger_ProcessData(void)
         return;
     }
 
-    char line[384];
+    char line[512];
 
    for (uint16_t i = 0; i < log_index; i++)
    {
@@ -121,22 +123,46 @@ void Logger_ProcessData(void)
        int len = snprintf(
            line,
            sizeof(line),
-           "%lu,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%u,%u,%u,%u,%u,%lu,%u,%u,%u,%u\r\n",
+           "%lu,"
+           "%.2f,%.2f,%.2f,"
+           "%.2f,%.2f,%.2f,"
+           "%.2f,%.2f,%.2f,%.2f,"
+           "%.2f,%.2f,%.2f,%.2f,"
+           "%.2f,%.2f,%.2f,%.2f,"
+           "%u,%u,%u,%u,%u,"
+           "%lu,%u,%u,%u,%u\r\n",
+
            (unsigned long)log_buffer[i].timestamp_ms,
+
            log_buffer[i].roll_measured,
            log_buffer[i].pitch_measured,
            log_buffer[i].yaw_rate_measured,
+
            log_buffer[i].roll_setpoint,
            log_buffer[i].pitch_setpoint,
            log_buffer[i].yaw_rate_setpoint,
+
            log_buffer[i].roll_correction,
+           log_buffer[i].roll_p_term,
+           log_buffer[i].roll_i_term,
+           log_buffer[i].roll_d_term,
+
            log_buffer[i].pitch_correction,
+           log_buffer[i].pitch_p_term,
+           log_buffer[i].pitch_i_term,
+           log_buffer[i].pitch_d_term,
+
            log_buffer[i].yaw_rate_correction,
+           log_buffer[i].yaw_p_term,
+           log_buffer[i].yaw_i_term,
+           log_buffer[i].yaw_d_term,
+
            log_buffer[i].throttle,
            log_buffer[i].motor1,
            log_buffer[i].motor2,
            log_buffer[i].motor3,
            log_buffer[i].motor4,
+
            (unsigned long)log_buffer[i].valid_frame_count,
            log_buffer[i].receiver_valid,
            log_buffer[i].sensor_valid,

@@ -28,6 +28,18 @@ typedef struct
     float pitch_correction;
     float yaw_rate_correction;
 
+    float roll_p_term;
+    float roll_i_term;
+    float roll_d_term;
+
+    float pitch_p_term;
+    float pitch_i_term;
+    float pitch_d_term;
+
+    float yaw_p_term;
+    float yaw_i_term;
+    float yaw_d_term;
+
     uint16_t throttle;
 
     uint16_t motor1;

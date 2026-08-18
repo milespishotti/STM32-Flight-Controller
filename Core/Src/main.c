@@ -361,6 +361,8 @@ int main(void)
                   .pitch_setpoint = setpoints->pitch_setpoint,
                   .yaw_rate_setpoint = setpoints->yaw_rate_setpoint,
 
+                  .throttle = setpoints->throttle,
+
                   .roll_measured = roll,
                   .pitch_measured = pitch,
                   .yaw_rate_measured = correctedGz,
@@ -399,12 +401,26 @@ int main(void)
               .roll_measured = roll,
               .pitch_measured = pitch,
               .yaw_rate_measured = correctedGz,
+
               .roll_setpoint = setpoints->roll_setpoint,
               .pitch_setpoint = setpoints->pitch_setpoint,
               .yaw_rate_setpoint = setpoints->yaw_rate_setpoint,
+
               .roll_correction = controller_output->roll_correction,
               .pitch_correction = controller_output->pitch_correction,
               .yaw_rate_correction = controller_output->yaw_rate_correction,
+
+              .roll_p_term = controller_output->roll_p_term,
+              .roll_i_term = controller_output->roll_i_term,
+              .roll_d_term = controller_output->roll_d_term,
+
+              .pitch_p_term = controller_output->pitch_p_term,
+              .pitch_i_term = controller_output->pitch_i_term,
+              .pitch_d_term = controller_output->pitch_d_term,
+
+              .yaw_p_term = controller_output->yaw_p_term,
+              .yaw_i_term = controller_output->yaw_i_term,
+              .yaw_d_term = controller_output->yaw_d_term,
 
               .throttle = setpoints->throttle,
 
@@ -421,14 +437,12 @@ int main(void)
               .armed = Safety_IsArmed(),
 
               .timestamp_ms = HAL_GetTick()
-
-
           };
 
           current_armed = flight_data.armed;
           current_throttle = flight_data.throttle;
 
-          if ((current_armed == true) && (current_throttle >= 650))
+          if ((current_armed == true) && (current_throttle >= 550))
           {
               Logger_ReceiveData(&flight_data);
           }
